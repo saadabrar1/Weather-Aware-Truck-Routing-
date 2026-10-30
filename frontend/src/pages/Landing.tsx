@@ -1,25 +1,6 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import FeatureCarousel from "../components/FeatureCarousel";
 import Logo from "../components/Logo";
 import { LEVELS } from "../risk";
-
-const FEATURES = [
-  {
-    title: "3 route options",
-    body: "Every trip is compared across three distinct routes from a truck-aware routing API.",
-  },
-  {
-    title: "Weather at your ETA",
-    body: "Forecasts are read every 10, 25 or 50 miles at the hour the truck actually arrives there.",
-  },
-  {
-    title: "Load-aware risk",
-    body: "Wind, rain and snow are graded Low to No Travel, and heavy loads raise the wind risk.",
-  },
-  {
-    title: "48-hour corridor view",
-    body: "A heatmap of the trip corridor with a slider across the next 0–48 hours.",
-  },
-];
 
 // The thresholds from the brief, shown exactly as the backend applies them.
 const RULES = [
@@ -89,21 +70,7 @@ export default function Landing() {
               See the risk rules
             </a>
           </div>
-          <Preview />
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-4 py-16">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {FEATURES.map((f) => (
-            <div
-              key={f.title}
-              className="border-ink-700 bg-ink-900 border-t-turq/60 rounded-xl border border-t-2 p-5"
-            >
-              <h3 className="font-bold">{f.title}</h3>
-              <p className="mt-2 text-sm text-slate-400">{f.body}</p>
-            </div>
-          ))}
+          <FeatureCarousel />
         </div>
       </section>
 
@@ -204,137 +171,6 @@ export default function Landing() {
           </a>
         </div>
       </footer>
-    </div>
-  );
-}
-
-// A drawn preview of the planner: three routes, risk-coloured checkpoints and
-// the recommended route in turquoise. Pure SVG, so it is sharp at any size.
-// Checkpoints are placed on the paths themselves once they are measured.
-const PREVIEW_ROUTES = [
-  {
-    d: "M60 250 C 180 120, 330 120, 480 150 S 680 120, 760 90",
-    main: true,
-    levels: [0, 0, 0, 1, 0, 0],
-  },
-  {
-    d: "M60 250 C 200 260, 360 230, 500 220 S 690 160, 760 90",
-    main: false,
-    levels: [0, 1, 2, 1, 0],
-  },
-  {
-    d: "M60 250 C 160 330, 380 330, 540 280 S 700 170, 760 90",
-    main: false,
-    levels: [0, 2, 3, 2, 1],
-  },
-];
-
-type Dot = { x: number; y: number; level: number };
-
-function Preview() {
-  const paths = useRef<(SVGPathElement | null)[]>([]);
-  const [dots, setDots] = useState<Dot[]>([]);
-
-  useLayoutEffect(() => {
-    const placed: Dot[] = [];
-    PREVIEW_ROUTES.forEach((r, i) => {
-      const path = paths.current[i];
-      if (!path) return;
-      const length = path.getTotalLength();
-      r.levels.forEach((level, k) => {
-        const p = path.getPointAtLength((length * (k + 1)) / (r.levels.length + 1));
-        placed.push({ x: p.x, y: p.y, level });
-      });
-    });
-    setDots(placed);
-  }, []);
-
-  // Centre the storm glow on the worst checkpoint it explains.
-  const storm = dots.reduce<Dot | null>((w, d) => (!w || d.level > w.level ? d : w), null);
-
-  return (
-    <div className="border-ink-600 bg-ink-900 shadow-turq/10 mx-auto mt-14 max-w-4xl overflow-hidden rounded-2xl border shadow-2xl">
-      <div className="border-ink-700 flex items-center gap-1.5 border-b px-4 py-2.5">
-        {[0, 1, 2].map((i) => (
-          <span key={i} className="bg-ink-600 h-2.5 w-2.5 rounded-full" />
-        ))}
-      </div>
-      <svg
-        viewBox="0 0 820 360"
-        className="block w-full"
-        role="img"
-        aria-label="Preview of three compared routes, the recommended one avoiding a storm"
-      >
-        <defs>
-          <radialGradient id="wash" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#22c55e" stopOpacity="0.22" />
-            <stop offset="100%" stopColor="#22c55e" stopOpacity="0" />
-          </radialGradient>
-          <radialGradient id="storm" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#ef4444" stopOpacity="0.4" />
-            <stop offset="60%" stopColor="#f97316" stopOpacity="0.15" />
-            <stop offset="100%" stopColor="#f97316" stopOpacity="0" />
-          </radialGradient>
-        </defs>
-        <rect width="820" height="360" fill="#0b1014" />
-        <ellipse cx="400" cy="190" rx="420" ry="190" fill="url(#wash)" />
-        {storm && <ellipse cx={storm.x} cy={storm.y} rx="150" ry="80" fill="url(#storm)" />}
-        {PREVIEW_ROUTES.map((r, i) => ({ r, i }))
-          .reverse()
-          .map(({ r, i }) => (
-            <path
-              key={r.d}
-              ref={(el) => {
-                paths.current[i] = el;
-              }}
-              d={r.d}
-              fill="none"
-              stroke={r.main ? "#40e0d0" : "#6b7f8a"}
-              strokeWidth={r.main ? 5 : 3}
-              strokeLinecap="round"
-              opacity={r.main ? 1 : 0.8}
-            />
-          ))}
-        {dots.map((d) => (
-          <circle
-            key={`${d.x.toFixed(1)}-${d.y.toFixed(1)}`}
-            cx={d.x}
-            cy={d.y}
-            r={6}
-            fill={LEVELS[d.level].color}
-            stroke="#0b1014"
-            strokeWidth="2"
-          />
-        ))}
-        <circle cx="60" cy="250" r="8" fill="#0b1014" stroke="#fff" strokeWidth="3" />
-        <rect
-          x="752"
-          y="82"
-          width="16"
-          height="16"
-          rx="3"
-          transform="rotate(45 760 90)"
-          fill="#40e0d0"
-          stroke="#fff"
-          strokeWidth="3"
-        />
-        <g transform="translate(40 24)">
-          <rect
-            width="236"
-            height="64"
-            rx="10"
-            fill="#16222a"
-            stroke="#40e0d0"
-            strokeOpacity="0.5"
-          />
-          <text x="14" y="24" fill="#40e0d0" fontSize="11" fontWeight="700" letterSpacing="1">
-            ★ RECOMMENDED
-          </text>
-          <text x="14" y="46" fill="#e2e8f0" fontSize="14" fontWeight="700">
-            Route A · 0 Severe mi
-          </text>
-        </g>
-      </svg>
     </div>
   );
 }
