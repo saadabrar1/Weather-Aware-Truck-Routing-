@@ -15,7 +15,7 @@ import { LEVELS, ROUTE_LETTERS, formatTime } from "../risk";
 
 setWorkerUrl(workerUrl);
 
-const STYLE_URL = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
+const STYLE_URL = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 const EMPTY: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: [] };
 
 const levelColor: ExpressionSpecification = [
@@ -37,7 +37,7 @@ function heatColor(hour: number): ExpressionSpecification {
 
 // Calm (Low) is the usual case, so it stays a faint wash and real risk stands out.
 function heatOpacity(hour: number): ExpressionSpecification {
-  return ["case", ["==", ["get", `h${hour}`], 0], 0.14, 0.32] as ExpressionSpecification;
+  return ["case", ["==", ["get", `h${hour}`], 0], 0.11, 0.42] as ExpressionSpecification;
 }
 
 type Props = {
@@ -88,12 +88,21 @@ export default function MapView({ plan, selectedId, onSelect, heatmap, hour }: P
           "circle-opacity": heatOpacity(0),
         },
       });
+      // A soft turquoise glow under the selected route only.
+      map.addLayer({
+        id: "route-glow",
+        type: "line",
+        source: "routes",
+        filter: ["==", ["get", "selected"], true],
+        layout: { "line-join": "round", "line-cap": "round" },
+        paint: { "line-color": "#40e0d0", "line-width": 16, "line-blur": 10, "line-opacity": 0.35 },
+      });
       map.addLayer({
         id: "routes-casing",
         type: "line",
         source: "routes",
         layout: { "line-join": "round", "line-cap": "round", "line-sort-key": ["get", "z"] },
-        paint: { "line-color": "#ffffff", "line-width": ["case", ["get", "selected"], 9, 6] },
+        paint: { "line-color": "#0b1014", "line-width": ["case", ["get", "selected"], 9, 6] },
       });
       map.addLayer({
         id: "routes",
@@ -101,7 +110,7 @@ export default function MapView({ plan, selectedId, onSelect, heatmap, hour }: P
         source: "routes",
         layout: { "line-join": "round", "line-cap": "round", "line-sort-key": ["get", "z"] },
         paint: {
-          "line-color": ["case", ["get", "selected"], "#1d4ed8", "#64748b"],
+          "line-color": ["case", ["get", "selected"], "#40e0d0", "#6b7f8a"],
           "line-width": ["case", ["get", "selected"], 5, 3],
           "line-opacity": ["case", ["get", "selected"], 1, 0.7],
         },
@@ -115,7 +124,7 @@ export default function MapView({ plan, selectedId, onSelect, heatmap, hour }: P
           "circle-color": levelColor,
           "circle-radius": ["case", ["get", "selected"], 6, 4],
           "circle-opacity": ["case", ["get", "selected"], 1, 0.75],
-          "circle-stroke-color": "#ffffff",
+          "circle-stroke-color": "#0b1014",
           "circle-stroke-width": 1.5,
         },
       });
@@ -206,12 +215,10 @@ export default function MapView({ plan, selectedId, onSelect, heatmap, hour }: P
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !ready) return;
-    const frame = requestAnimationFrame(() =>
-      {
-        map.setPaintProperty("heat", "circle-color", heatColor(hour));
-        map.setPaintProperty("heat", "circle-opacity", heatOpacity(hour));
-      },
-    );
+    const frame = requestAnimationFrame(() => {
+      map.setPaintProperty("heat", "circle-color", heatColor(hour));
+      map.setPaintProperty("heat", "circle-opacity", heatOpacity(hour));
+    });
     return () => cancelAnimationFrame(frame);
   }, [hour, ready]);
 
@@ -225,17 +232,17 @@ function escapeHtml(s: string): string {
 function popupHtml(cp: Checkpoint, letter: string): string {
   const level = LEVELS[cp.level];
   const reasons = cp.reasons.length
-    ? `<div class="mt-1 text-xs text-slate-600">${cp.reasons.map(escapeHtml).join("<br/>")}</div>`
+    ? `<div class="mt-1 text-xs text-slate-400">${cp.reasons.map(escapeHtml).join("<br/>")}</div>`
     : "";
   return `
     <div class="text-sm">
       <div class="font-semibold">Route ${letter} · mile ${Math.round(cp.mile)}</div>
-      <div class="text-slate-600">ETA ${escapeHtml(formatTime(cp.eta))}</div>
+      <div class="text-slate-400">ETA ${escapeHtml(formatTime(cp.eta))}</div>
       <div class="mt-1 inline-flex items-center gap-1.5 font-medium">
         <span style="background:${level.color}" class="inline-block h-2.5 w-2.5 rounded-full"></span>
         ${level.label}
       </div>
-      <div class="mt-1 text-xs text-slate-600">
+      <div class="mt-1 text-xs text-slate-400">
         Wind ${cp.wind_mph} mph · Rain ${cp.rain_in_hr.toFixed(2)} in/hr · Snow ${cp.snow_in_hr.toFixed(2)} in/hr
       </div>
       ${reasons}

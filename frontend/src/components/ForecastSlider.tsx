@@ -13,25 +13,38 @@ type Props = {
 export default function ForecastSlider({ start, hours, hour, onChange, loading, error }: Props) {
   const at = start ? new Date(new Date(start).getTime() + hour * 3_600_000) : null;
   return (
-    <div className="rounded-lg bg-white/95 p-3 shadow-lg ring-1 ring-slate-200 backdrop-blur">
-      <div className="mb-1 flex items-baseline justify-between gap-2 text-xs">
-        <span className="font-semibold text-slate-700">Corridor weather risk</span>
-        <span className="tabular-nums text-slate-600">
-          {loading ? "Loading forecast…" : error ? error : at ? `+${hour} h · ${formatTime(at)}` : ""}
+    <div className="border-ink-600 bg-ink-900/90 rounded-xl border p-3 shadow-2xl shadow-black/50 backdrop-blur">
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="text-[11px] font-semibold tracking-wider text-slate-400 uppercase">
+          Corridor weather risk
         </span>
+        {error ? (
+          <span className="text-xs text-red-300">{error}</span>
+        ) : loading ? (
+          <span className="animate-pulse text-xs text-slate-400">Loading 48 h forecast…</span>
+        ) : (
+          at && <span className="text-xs text-slate-400">{formatTime(at)}</span>
+        )}
       </div>
-      <input
-        type="range"
-        min={0}
-        max={hours - 1}
-        step={1}
-        value={hour}
-        disabled={!start}
-        onChange={(e) => onChange(Number(e.target.value))}
-        aria-label="Forecast hour after departure"
-        className="w-full accent-blue-700"
-      />
-      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-600">
+      <div className="mt-1 flex items-center gap-3">
+        <span className="text-turq w-16 shrink-0 text-2xl font-extrabold tabular-nums">
+          +{hour}
+          <span className="text-sm font-semibold text-slate-400"> h</span>
+        </span>
+        <input
+          type="range"
+          min={0}
+          max={hours - 1}
+          step={1}
+          value={hour}
+          disabled={!start}
+          onChange={(e) => onChange(Number(e.target.value))}
+          aria-label="Forecast hour after departure"
+          aria-valuetext={at ? `${hour} hours after departure, ${formatTime(at)}` : undefined}
+          className="accent-turq w-full disabled:opacity-40"
+        />
+      </div>
+      <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-400">
         {LEVELS.map((l) => (
           <span key={l.key} className="inline-flex items-center gap-1">
             <span className="h-2 w-2 rounded-full" style={{ background: l.color }} />
