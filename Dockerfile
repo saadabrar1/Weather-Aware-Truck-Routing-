@@ -11,6 +11,9 @@ RUN npm run build
 # --- Stage 2: Django API that also serves the built app ---------------------
 FROM python:3.12-slim AS app
 
+# Links the published image to this repository on GitHub Container Registry.
+LABEL org.opencontainers.image.source="https://github.com/saadabrar1/Weather-Aware-Truck-Routing-"
+
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \

@@ -1,0 +1,11 @@
+# DOMAIN comes from /opt/weatherroute/.env, e.g. 3.120.45.67.sslip.io
+{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy app:8000
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+}
