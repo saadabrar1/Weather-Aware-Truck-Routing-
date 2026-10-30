@@ -81,3 +81,22 @@ def test_corridor_is_capped_for_long_trips():
         coast_to_coast.append(destination(coast_to_coast[-1], 90, 1.0))
     pts = corridor_points([coast_to_coast])
     assert 0 < len(pts) <= MAX_POINTS
+
+
+@responses.activate
+def test_geocoder_keeps_one_suggestion_per_label(settings):
+    from planner.services import geocoding
+
+    settings.HERE_API_KEY = ""
+
+    def feature(lon, lat):
+        props = {"name": "Chicago", "state": "Illinois", "country": "United States"}
+        return {"properties": props, "geometry": {"coordinates": [lon, lat]}}
+
+    responses.add(
+        responses.GET,
+        "https://photon.komoot.io/api/",
+        json={"features": [feature(-87.62, 41.87), feature(-87.63, 41.89)]},
+    )
+    places = geocoding.search("chicago")
+    assert places == [{"label": "Chicago, Illinois, United States", "lat": 41.87, "lon": -87.62}]

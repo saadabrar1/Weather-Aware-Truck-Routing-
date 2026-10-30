@@ -25,7 +25,10 @@ def search(query: str) -> list[dict]:
     if hit is not None:
         return hit
     places = _here(query) if settings.HERE_API_KEY else _photon(query)
-    result = [asdict(p) for p in places]
+    # A city often matches several map objects (boundary, centre node, ...) with
+    # the same name; one suggestion per label is enough.
+    unique = {p.label: p for p in reversed(places)}
+    result = [asdict(unique[label]) for label in dict.fromkeys(p.label for p in places)]
     cache.set(key, result, 24 * 3600)
     return result
 
