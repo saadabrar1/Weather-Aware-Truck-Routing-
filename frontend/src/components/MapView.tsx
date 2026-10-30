@@ -49,9 +49,20 @@ type Props = {
   heatmap: Heatmap | null;
   hour: number;
   focus: CheckpointFocus;
+  originLabel?: string;
+  destinationLabel?: string;
 };
 
-export default function MapView({ plan, selectedId, onSelect, heatmap, hour, focus }: Props) {
+export default function MapView({
+  plan,
+  selectedId,
+  onSelect,
+  heatmap,
+  hour,
+  focus,
+  originLabel,
+  destinationLabel,
+}: Props) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibre | null>(null);
   const popupRef = useRef<Popup | null>(null);
@@ -87,28 +98,36 @@ export default function MapView({ plan, selectedId, onSelect, heatmap, hour, foc
         source: "heat",
         paint: {
           "circle-color": heatColor(0),
-          // Points sit ~0.25° apart; the radius doubles per zoom level so the
-          // blobs keep overlapping into one continuous corridor surface.
-          "circle-radius": ["interpolate", ["exponential", 2], ["zoom"], 3, 7, 11, 1792],
+          // Points sit ~0.25° (~17 mi) apart. A radius of about twice that
+          // spacing, doubling per zoom level, joins neighbours into one band
+          // that follows the corridor instead of spilling far past it.
+          "circle-radius": ["interpolate", ["exponential", 2], ["zoom"], 3, 5, 11, 1280],
           "circle-blur": 1,
           "circle-opacity": heatOpacity(0),
         },
       });
-      // A soft turquoise glow under the selected route only.
+      // Colour says "recommended" (turquoise) or "alternative" (grey); width and
+      // a glow say "selected". The two never share a cue, so choosing an
+      // alternative can't make it look recommended.
       map.addLayer({
         id: "route-glow",
         type: "line",
         source: "routes",
         filter: ["==", ["get", "selected"], true],
         layout: { "line-join": "round", "line-cap": "round" },
-        paint: { "line-color": "#40e0d0", "line-width": 16, "line-blur": 10, "line-opacity": 0.35 },
+        paint: {
+          "line-color": ["case", ["get", "recommended"], "#40e0d0", "#e2e8f0"],
+          "line-width": 18,
+          "line-blur": 10,
+          "line-opacity": 0.35,
+        },
       });
       map.addLayer({
         id: "routes-casing",
         type: "line",
         source: "routes",
         layout: { "line-join": "round", "line-cap": "round", "line-sort-key": ["get", "z"] },
-        paint: { "line-color": "#0b1014", "line-width": ["case", ["get", "selected"], 9, 6] },
+        paint: { "line-color": "#0b1014", "line-width": ["case", ["get", "selected"], 10, 6] },
       });
       map.addLayer({
         id: "routes",
@@ -116,9 +135,9 @@ export default function MapView({ plan, selectedId, onSelect, heatmap, hour, foc
         source: "routes",
         layout: { "line-join": "round", "line-cap": "round", "line-sort-key": ["get", "z"] },
         paint: {
-          "line-color": ["case", ["get", "selected"], "#40e0d0", "#6b7f8a"],
-          "line-width": ["case", ["get", "selected"], 5, 3],
-          "line-opacity": ["case", ["get", "selected"], 1, 0.7],
+          "line-color": ["case", ["get", "recommended"], "#40e0d0", "#7b8f9a"],
+          "line-width": ["case", ["get", "selected"], 6, 3],
+          "line-opacity": ["case", ["get", "selected"], 1, 0.75],
         },
       });
       map.addLayer({
@@ -183,7 +202,12 @@ export default function MapView({ plan, selectedId, onSelect, heatmap, hour, foc
       type: "FeatureCollection",
       features: routes.map((r) => ({
         type: "Feature",
-        properties: { id: r.id, selected: r.id === selectedId, z: r.id === selectedId ? 1 : 0 },
+        properties: {
+          id: r.id,
+          selected: r.id === selectedId,
+          recommended: r.id === plan?.recommended_id,
+          z: r.id === selectedId ? 1 : 0,
+        },
         geometry: { type: "LineString", coordinates: r.geometry },
       })),
     });
@@ -223,10 +247,12 @@ export default function MapView({ plan, selectedId, onSelect, heatmap, hour, foc
     });
     const first = plan.routes[0].geometry;
     markersRef.current.push(
-      new Marker({ element: endpoint("start") }).setLngLat(first[0]).addTo(map),
-      new Marker({ element: endpoint("end") }).setLngLat(first[first.length - 1]).addTo(map),
+      new Marker({ element: endpoint("start", originLabel) }).setLngLat(first[0]).addTo(map),
+      new Marker({ element: endpoint("end", destinationLabel) })
+        .setLngLat(first[first.length - 1])
+        .addTo(map),
     );
-  }, [plan, selectedId, ready]);
+  }, [plan, selectedId, ready, originLabel, destinationLabel]);
 
   // Table hover highlights a checkpoint; a click also flies there and opens it.
   useEffect(() => {
@@ -260,7 +286,12 @@ export default function MapView({ plan, selectedId, onSelect, heatmap, hour, foc
     const bounds = new LngLatBounds();
     for (const r of plan.routes) for (const c of r.geometry) bounds.extend(c);
     const mobile = window.innerWidth < 768;
-    map.fitBounds(bounds, { padding: mobile ? 32 : 64, duration: 800 });
+    // Leave room on desktop for the map key (top right), the forecast panel
+    // (bottom left) and the endpoint labels, so no route ends up underneath.
+    map.fitBounds(bounds, {
+      padding: mobile ? 40 : { top: 60, right: 260, bottom: 230, left: 80 },
+      duration: 800,
+    });
   }, [plan, ready]);
 
   // Heatmap data: one feature per corridor point with every hour as a property,
@@ -312,13 +343,24 @@ function routeLabel(letter: string, recommended: boolean, selected: boolean): HT
   return el;
 }
 
-function endpoint(kind: "start" | "end"): HTMLElement {
+// The pin keeps the marker's anchor; the place name hangs to its right.
+function endpoint(kind: "start" | "end", label?: string): HTMLElement {
+  const role = kind === "start" ? "Origin" : "Destination";
   const el = document.createElement("div");
-  el.title = kind === "start" ? "Origin" : "Destination";
-  el.className =
+  el.className = "relative h-4 w-4";
+  el.title = label ? `${role}: ${label}` : role;
+  const pin = document.createElement("div");
+  pin.className =
     kind === "start"
       ? "h-4 w-4 rounded-full border-[3px] border-white bg-ink-950 shadow-lg"
       : "h-4 w-4 rotate-45 rounded-sm border-[3px] border-white bg-turq shadow-lg";
+  const tag = document.createElement("div");
+  tag.className =
+    "pointer-events-none absolute top-1/2 left-6 -translate-y-1/2 whitespace-nowrap rounded-md border border-ink-600 bg-ink-900/90 px-1.5 py-0.5 text-[11px] font-semibold text-slate-100 shadow-lg";
+  // textContent, never innerHTML: the label is user-chosen text.
+  const place = label?.split(",")[0].trim();
+  tag.textContent = place ? `${role} · ${place}` : role;
+  el.append(pin, tag);
   return el;
 }
 
