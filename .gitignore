@@ -17,8 +17,9 @@ frontend/dist/
 .env.*
 !.env.example
 
-# Local AI notes
+# Local-only notes (never committed)
 CLAUDE.md
+LOOM_SCRIPT.md
 .claude/
 
 # OS / editor
