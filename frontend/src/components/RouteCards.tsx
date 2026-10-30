@@ -1,9 +1,16 @@
-import type { Plan, RouteOption } from "../api";
+import type { Checkpoint, Plan, RouteOption } from "../api";
 import { LEVELS, ROUTE_LETTERS, formatDuration, formatTime, peakLevel } from "../risk";
 
-type Props = { plan: Plan; selectedId: string | null; onSelect: (id: string) => void };
+export type CheckpointFocus = { routeId: string; checkpoint: Checkpoint; fly: boolean } | null;
 
-export default function RouteCards({ plan, selectedId, onSelect }: Props) {
+type Props = {
+  plan: Plan;
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+  onFocusCheckpoint: (focus: CheckpointFocus) => void;
+};
+
+export default function RouteCards({ plan, selectedId, onSelect, onFocusCheckpoint }: Props) {
   const byRank = [...plan.routes].sort((a, b) => a.rank - b.rank);
   const letter = (r: RouteOption) => ROUTE_LETTERS[plan.routes.indexOf(r)];
   const best = plan.routes.find((r) => r.id === plan.recommended_id)!;
@@ -14,32 +21,21 @@ export default function RouteCards({ plan, selectedId, onSelect }: Props) {
       {plan.warnings.map((w) => (
         <p
           key={w}
+          role="status"
           className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200"
         >
           {w}
         </p>
       ))}
 
-      <div className="border-turq/30 from-deep to-ink-800 rounded-xl border bg-gradient-to-br p-3">
-        <div className="text-turq text-[11px] font-semibold tracking-wider uppercase">
-          Recommended route
-        </div>
-        <div className="mt-0.5 text-lg font-bold">
-          Route {letter(best)}{" "}
-          <span className="font-medium text-slate-300">
-            · {formatDuration(best.duration_s)} · {Math.round(best.distance_mi)} mi
-          </span>
-        </div>
-        <p className="mt-1 text-xs text-slate-300">{plan.explanation}</p>
-      </div>
-
-      <ul className="space-y-2">
+      <ul className="space-y-2" aria-label="Route options, best first">
         {byRank.map((r) => (
           <li key={r.id}>
             <RouteCard
               route={r}
               letter={letter(r)}
-              recommended={r.id === plan.recommended_id}
+              best={best}
+              explanation={plan.explanation}
               selected={r.id === selectedId}
               onSelect={() => onSelect(r.id)}
             />
@@ -47,7 +43,15 @@ export default function RouteCards({ plan, selectedId, onSelect }: Props) {
         ))}
       </ul>
 
-      {selected && <CheckpointTable route={selected} letter={letter(selected)} />}
+      {selected && (
+        <CheckpointTable
+          route={selected}
+          letter={letter(selected)}
+          onFocus={(checkpoint, fly) =>
+            onFocusCheckpoint(checkpoint && { routeId: selected.id, checkpoint, fly })
+          }
+        />
+      )}
     </div>
   );
 }
@@ -55,12 +59,14 @@ export default function RouteCards({ plan, selectedId, onSelect }: Props) {
 type CardProps = {
   route: RouteOption;
   letter: string;
-  recommended: boolean;
+  best: RouteOption;
+  explanation: string;
   selected: boolean;
   onSelect: () => void;
 };
 
-function RouteCard({ route, letter, recommended, selected, onSelect }: CardProps) {
+function RouteCard({ route, letter, best, explanation, selected, onSelect }: CardProps) {
+  const recommended = route.id === best.id;
   const peak = LEVELS[peakLevel(route)];
   const m = route.miles_by_level;
   return (
@@ -68,57 +74,122 @@ function RouteCard({ route, letter, recommended, selected, onSelect }: CardProps
       type="button"
       onClick={onSelect}
       aria-pressed={selected}
-      className={`bg-ink-800 w-full rounded-xl border p-3 text-left transition ${
-        selected
-          ? "border-turq/60 shadow-[0_0_0_1px_rgba(64,224,208,0.25),0_8px_24px_-8px_rgba(64,224,208,0.25)]"
-          : "border-ink-600 hover:border-ink-600 hover:bg-ink-700"
+      className={`w-full overflow-hidden rounded-xl border text-left transition ${
+        recommended ? "bg-ink-800 border-turq/50" : "bg-ink-800/70 border-ink-600 hover:bg-ink-700"
+      } ${selected ? "ring-turq/60 ring-2" : ""}`}
+    >
+      {recommended && (
+        <div className="from-deep border-turq/30 border-b bg-gradient-to-r to-transparent px-3 py-2">
+          <div className="text-turq flex items-center gap-1.5 text-[11px] font-bold tracking-wider uppercase">
+            <svg viewBox="0 0 20 20" className="h-3.5 w-3.5 fill-current" aria-hidden>
+              <path d="M10 1.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.5 7.7l5.9-.9z" />
+            </svg>
+            Recommended
+          </div>
+          <p className="mt-0.5 text-xs text-slate-300">{explanation}</p>
+        </div>
+      )}
+
+      <div className="p-3">
+        <div className="flex items-center justify-between gap-2">
+          <span className="flex items-center gap-2 font-semibold">
+            <RouteBadge letter={letter} recommended={recommended} />
+            Route {letter}
+            {route.name && (
+              <span className="truncate font-normal text-slate-400">· {route.name}</span>
+            )}
+          </span>
+          {!recommended && (
+            <span className="text-[11px] font-semibold text-slate-400">Rank #{route.rank}</span>
+          )}
+        </div>
+
+        {!recommended && <Deltas route={route} best={best} />}
+
+        <div className="mt-2 flex items-end justify-between gap-3">
+          <div>
+            <div className="text-[11px] font-semibold tracking-wider text-slate-400 uppercase">
+              Peak risk
+            </div>
+            <div className="text-xl leading-tight font-extrabold" style={{ color: peak.color }}>
+              {peak.label}
+            </div>
+          </div>
+          <div className="text-right text-xs text-slate-400">
+            avg risk{" "}
+            <span className="font-semibold text-slate-200">{route.avg_risk.toFixed(2)}</span> / 4
+          </div>
+        </div>
+
+        <dl className="mt-2 grid grid-cols-4 gap-1.5 text-center">
+          <Stat label="Distance" value={`${Math.round(route.distance_mi)} mi`} />
+          <Stat label="Time" value={formatDuration(route.duration_s)} />
+          <Stat label="Severe" value={`${Math.round(m.severe)} mi`} alert={m.severe > 0} />
+          <Stat label="High" value={`${Math.round(m.high)} mi`} alert={m.high > 0} />
+        </dl>
+
+        <RiskBar route={route} />
+      </div>
+    </button>
+  );
+}
+
+export function RouteBadge({ letter, recommended }: { letter: string; recommended: boolean }) {
+  return (
+    <span
+      className={`grid h-6 w-6 shrink-0 place-items-center rounded-md text-xs font-extrabold ${
+        recommended ? "bg-turq text-ink-950" : "bg-ink-600 text-slate-200"
       }`}
     >
-      <div className="flex items-center justify-between gap-2">
-        <span className="font-semibold">
-          Route {letter}
-          {route.name && <span className="font-normal text-slate-400"> · {route.name}</span>}
+      {letter}
+    </span>
+  );
+}
+
+// What choosing this route instead of the recommended one costs or saves.
+function Deltas({ route, best }: { route: RouteOption; best: RouteOption }) {
+  const dt = route.duration_s - best.duration_s;
+  const dd = route.distance_mi - best.distance_mi;
+  const dSevere = route.miles_by_level.severe - best.miles_by_level.severe;
+  const dHigh = route.miles_by_level.high - best.miles_by_level.high;
+  const dNoTravel = route.miles_by_level.no_travel - best.miles_by_level.no_travel;
+  const chips: { text: string; worse: boolean }[] = [
+    { text: `${dt >= 0 ? "+" : "−"}${formatDuration(Math.abs(dt))}`, worse: dt > 0 },
+    { text: `${dd >= 0 ? "+" : "−"}${Math.abs(Math.round(dd))} mi`, worse: dd > 0 },
+  ];
+  for (const [label, diff] of [
+    ["No Travel", dNoTravel],
+    ["Severe", dSevere],
+    ["High", dHigh],
+  ] as const) {
+    if (Math.round(diff) !== 0) {
+      chips.push({
+        text: `${diff > 0 ? "+" : "−"}${Math.abs(Math.round(diff))} ${label} mi`,
+        worse: diff > 0,
+      });
+    }
+  }
+  return (
+    <div className="mt-1.5 flex flex-wrap gap-1" aria-label="Compared with the recommended route">
+      {chips.map((c) => (
+        <span
+          key={c.text}
+          className={`rounded px-1.5 py-0.5 text-[11px] font-semibold tabular-nums ${
+            c.worse ? "bg-orange-500/10 text-orange-300" : "bg-green-500/10 text-green-300"
+          }`}
+        >
+          {c.text}
         </span>
-        {recommended ? (
-          <span className="bg-turq/15 text-turq rounded-full px-2 py-0.5 text-[11px] font-bold">
-            Recommended
-          </span>
-        ) : (
-          <span className="text-[11px] font-semibold text-slate-500">Rank #{route.rank}</span>
-        )}
-      </div>
-
-      <div className="mt-2 flex items-end justify-between gap-3">
-        <div>
-          <div className="text-[10px] font-semibold tracking-wider text-slate-500 uppercase">
-            Peak risk
-          </div>
-          <div className="text-xl leading-tight font-extrabold" style={{ color: peak.color }}>
-            {peak.label}
-          </div>
-        </div>
-        <div className="text-right text-xs text-slate-400">
-          avg risk <span className="font-semibold text-slate-200">{route.avg_risk.toFixed(2)}</span>{" "}
-          / 4
-        </div>
-      </div>
-
-      <dl className="mt-2 grid grid-cols-4 gap-2 text-center">
-        <Stat label="Distance" value={`${Math.round(route.distance_mi)} mi`} />
-        <Stat label="Time" value={formatDuration(route.duration_s)} />
-        <Stat label="Severe" value={`${Math.round(m.severe)} mi`} alert={m.severe > 0} />
-        <Stat label="High" value={`${Math.round(m.high)} mi`} alert={m.high > 0} />
-      </dl>
-
-      <RiskBar route={route} />
-    </button>
+      ))}
+      <span className="self-center text-[11px] text-slate-400">vs recommended</span>
+    </div>
   );
 }
 
 function Stat({ label, value, alert }: { label: string; value: string; alert?: boolean }) {
   return (
     <div className="bg-ink-900/70 rounded-md px-1 py-1.5">
-      <dt className="text-[10px] font-semibold tracking-wider text-slate-500 uppercase">{label}</dt>
+      <dt className="text-[11px] font-semibold tracking-wide text-slate-400 uppercase">{label}</dt>
       <dd className={`text-xs font-semibold ${alert ? "text-orange-300" : "text-slate-100"}`}>
         {value}
       </dd>
@@ -154,15 +225,25 @@ function RiskBar({ route }: { route: RouteOption }) {
   );
 }
 
-function CheckpointTable({ route, letter }: { route: RouteOption; letter: string }) {
+type TableProps = {
+  route: RouteOption;
+  letter: string;
+  onFocus: (checkpoint: Checkpoint | null, fly: boolean) => void;
+};
+
+// Hovering a row highlights its dot on the map; clicking (or Enter) flies there.
+function CheckpointTable({ route, letter, onFocus }: TableProps) {
   return (
     <section>
       <h3 className="mb-1.5 text-[11px] font-semibold tracking-wider text-slate-400 uppercase">
         Route {letter} · {route.checkpoints.length} weather checkpoints
       </h3>
-      <div className="border-ink-600 bg-ink-800 max-h-72 overflow-auto rounded-xl border">
+      <div
+        className="border-ink-600 bg-ink-800 max-h-80 overflow-auto rounded-xl border"
+        onMouseLeave={() => onFocus(null, false)}
+      >
         <table className="w-full text-xs">
-          <thead className="bg-ink-700 sticky top-0 text-left text-[10px] tracking-wider text-slate-400 uppercase">
+          <thead className="bg-ink-700 sticky top-0 text-left text-[11px] tracking-wide text-slate-300 uppercase">
             <tr>
               <th className="px-2 py-1.5 font-semibold">Mile</th>
               <th className="px-2 py-1.5 font-semibold">ETA</th>
@@ -174,8 +255,18 @@ function CheckpointTable({ route, letter }: { route: RouteOption; letter: string
             {route.checkpoints.map((c) => (
               <tr
                 key={c.mile}
-                className="border-ink-700 border-t text-slate-200"
-                title={c.reasons.join("\n")}
+                tabIndex={0}
+                className="border-ink-700 hover:bg-ink-700 focus-visible:bg-ink-700 cursor-pointer border-t text-slate-200"
+                title={c.reasons.join("\n") || "Show on map"}
+                onMouseEnter={() => onFocus(c, false)}
+                onFocus={() => onFocus(c, false)}
+                onClick={() => onFocus(c, true)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onFocus(c, true);
+                  }
+                }}
               >
                 <td className="px-2 py-1.5 tabular-nums">{Math.round(c.mile)}</td>
                 <td className="px-2 py-1.5 whitespace-nowrap">{formatTime(c.eta)}</td>
@@ -188,7 +279,7 @@ function CheckpointTable({ route, letter }: { route: RouteOption; letter: string
                     {LEVELS[c.level].label}
                   </span>
                 </td>
-                <td className="px-2 py-1.5 whitespace-nowrap text-slate-400 tabular-nums">
+                <td className="px-2 py-1.5 whitespace-nowrap text-slate-300 tabular-nums">
                   {Math.round(c.wind_mph)} mph · {c.rain_in_hr.toFixed(2)} ·{" "}
                   {c.snow_in_hr.toFixed(2)} in/h
                 </td>
