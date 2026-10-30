@@ -75,7 +75,7 @@ export default function TripForm({ loading, onSubmit }: Props) {
             required
             min={1}
             max={200000}
-            step={500}
+            step="any"
             value={weight}
             onChange={(e) => setWeight(e.target.value)}
             className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20"
