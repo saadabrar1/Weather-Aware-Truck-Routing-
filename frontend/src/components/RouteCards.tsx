@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import type { Checkpoint, Plan, RouteOption } from "../api";
 import {
   LEVELS,
@@ -240,12 +241,25 @@ type TableProps = {
 
 // Hovering a row highlights its dot on the map; clicking (or Enter) flies there.
 function CheckpointTable({ route, letter, onFocus }: TableProps) {
+  const scroller = useRef<HTMLDivElement>(null);
+  // A new analysis or another route starts the table back at its first row.
+  useEffect(() => {
+    scroller.current?.scrollTo({ top: 0 });
+  }, [route]);
+  const elevated = route.checkpoints.filter((c) => c.level > 0).length;
+
   return (
     <section>
-      <h3 className="mb-1.5 text-[11px] font-semibold tracking-wider text-slate-400 uppercase">
-        Route {letter} · {route.checkpoints.length} weather checkpoints
+      <h3 className="mb-1.5 flex items-baseline justify-between text-[11px] font-semibold tracking-wider text-slate-400 uppercase">
+        <span>
+          Route {letter} · {route.checkpoints.length} weather checkpoints
+        </span>
+        <span className={elevated ? "text-orange-300" : ""}>
+          {elevated ? `${elevated} above Low` : "All Low"}
+        </span>
       </h3>
       <div
+        ref={scroller}
         className="border-ink-600 bg-ink-800 max-h-80 overflow-auto rounded-xl border"
         onMouseLeave={() => onFocus(null, false)}
       >
@@ -273,7 +287,11 @@ function CheckpointTable({ route, letter, onFocus }: TableProps) {
               <tr
                 key={c.mile}
                 tabIndex={0}
-                className="border-ink-700 hover:bg-ink-700 focus-visible:bg-ink-700 cursor-pointer border-t text-slate-200"
+                className="border-ink-700 hover:bg-ink-700 focus-visible:bg-ink-700 even:bg-ink-900/40 cursor-pointer border-t text-slate-200"
+                // A risk-coloured edge makes anything above Low easy to spot.
+                style={
+                  c.level > 0 ? { boxShadow: `inset 3px 0 0 ${LEVELS[c.level].color}` } : undefined
+                }
                 title={c.reasons.join("\n") || "Show on map"}
                 onMouseEnter={() => onFocus(c, false)}
                 onFocus={() => onFocus(c, false)}
