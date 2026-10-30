@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+backend/staticfiles/
+
+# Node
+node_modules/
+frontend/dist/
+
+# Local config and secrets
+.env
+.env.*
+!.env.example
+
+# Local AI notes
+CLAUDE.md
+.claude/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
