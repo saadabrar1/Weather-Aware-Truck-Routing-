@@ -3,7 +3,7 @@ import { api, type Heatmap, type Plan, type PlanRequest } from "../api";
 import ForecastSlider from "../components/ForecastSlider";
 import Logo from "../components/Logo";
 import MapView from "../components/MapView";
-import RouteCards from "../components/RouteCards";
+import RouteCards, { type CheckpointFocus } from "../components/RouteCards";
 import TripForm from "../components/TripForm";
 
 export default function Planner() {
@@ -15,6 +15,7 @@ export default function Planner() {
   const [heatLoading, setHeatLoading] = useState(false);
   const [heatError, setHeatError] = useState<string | null>(null);
   const [hour, setHour] = useState(0);
+  const [focus, setFocus] = useState<CheckpointFocus>(null);
   // Ignore responses from a search the user has already replaced.
   const latest = useRef(0);
 
@@ -25,6 +26,7 @@ export default function Planner() {
     setHeatmap(null);
     setHeatError(null);
     setHour(0);
+    setFocus(null);
     try {
       const result = await api.plan(req);
       if (id !== latest.current) return;
@@ -49,6 +51,11 @@ export default function Planner() {
     }
   };
 
+  const selectRoute = (id: string) => {
+    setSelectedId(id);
+    setFocus((f) => (f && f.routeId !== id ? null : f));
+  };
+
   return (
     <div className="flex h-full flex-col md:flex-row">
       <aside
@@ -62,7 +69,7 @@ export default function Planner() {
             </span>
           </a>
           {plan && (
-            <span className="bg-ink-700 rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wider text-slate-400 uppercase">
+            <span className="bg-ink-700 rounded-full px-2 py-0.5 text-[11px] font-semibold tracking-wider text-slate-400 uppercase">
               Routing · {plan.provider}
             </span>
           )}
@@ -79,7 +86,12 @@ export default function Planner() {
           )}
           {loading && <ResultsSkeleton />}
           {plan && !loading && (
-            <RouteCards plan={plan} selectedId={selectedId} onSelect={setSelectedId} />
+            <RouteCards
+              plan={plan}
+              selectedId={selectedId}
+              onSelect={selectRoute}
+              onFocusCheckpoint={setFocus}
+            />
           )}
         </div>
       </aside>
@@ -92,7 +104,8 @@ export default function Planner() {
           <MapView
             plan={plan}
             selectedId={selectedId}
-            onSelect={setSelectedId}
+            onSelect={selectRoute}
+            focus={focus}
             heatmap={heatmap}
             hour={hour}
           />
