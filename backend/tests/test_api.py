@@ -182,3 +182,17 @@ def test_provider_outage_is_a_readable_503(client):
 
 def test_health(client):
     assert client.get("/api/health").json() == {"status": "ok"}
+
+
+@responses.activate
+def test_rate_limit_fails_fast_instead_of_waiting(client):
+    responses.add(
+        responses.GET,
+        re.compile(r"https://router\.project-osrm\.org/.*"),
+        status=429,
+        headers={"Retry-After": "60"},
+    )
+    res = plan(client)
+    assert res.status_code == 503
+    assert "rate limit" in res.json()["detail"]
+    assert len(responses.calls) == 1
