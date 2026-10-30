@@ -61,3 +61,8 @@ def test_explain_names_deciding_rule():
 def test_explain_time_tiebreak():
     ranked = rank([route("a", hours=6), route("b", hours=5)])
     assert explain(ranked) == "Same weather risk as the next route, and 60 min faster."
+
+
+def test_explain_average_never_reads_as_a_tie():
+    ranked = rank([route("a", avg=0.154), route("b", avg=0.152)])
+    assert explain(ranked) == "Lower average risk than the next route (0.152 vs 0.154)."

@@ -82,8 +82,12 @@ def explain(ranked: list[RouteRisk]) -> str:
                 minutes = round((runner_up[i] - best[i]) / 60)
                 return f"Same weather risk as the next route, and {minutes} min faster."
             if i == 3:
+                # Ranking compares three decimals; show as many as it takes
+                # for the two numbers to differ, or "0.15 vs 0.15" reads as a tie.
+                digits = 2 if f"{best[i]:.2f}" != f"{runner_up[i]:.2f}" else 3
                 return (
-                    f"Lower average risk than the next route ({best[i]:.2f} vs {runner_up[i]:.2f})."
+                    f"Lower average risk than the next route "
+                    f"({best[i]:.{digits}f} vs {runner_up[i]:.{digits}f})."
                 )
             return f"Fewer {name} than the next route ({best[i]:g} vs {runner_up[i]:g})."
     return "Ties with the next route on every rule."
