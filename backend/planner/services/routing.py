@@ -54,7 +54,13 @@ class HereRouting:
         }
         if via:
             params["via"] = f"{via[0]},{via[1]}!passThrough=true"
-        data = get_json("https://router.hereapi.com/v8/routes", params, provider="HERE routing")
+        # A via request is an optional forced alternative: try once, quickly.
+        data = get_json(
+            "https://router.hereapi.com/v8/routes",
+            params,
+            provider="HERE routing",
+            quick=via is not None,
+        )
         return [self._parse(r) for r in data.get("routes", [])]
 
     @staticmethod
@@ -119,6 +125,7 @@ class OsrmRouting:
                 "annotations": "duration",
             },
             provider="OSRM routing",
+            quick=via is not None,
         )
         if data.get("code") != "Ok":
             raise UpstreamError(data.get("message") or "No route found between those places.")

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import logging
+import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 
 from planner.core.corridor import corridor_points
@@ -26,15 +28,25 @@ MAX_DETOUR_RATIO = 1.6
 def plan_trip(
     origin: LatLon, dest: LatLon, departure: datetime, weight_lb: float, interval_mi: int
 ) -> dict:
+    started = time.monotonic()
     provider = get_provider()
     routes, warnings = _three_routes(provider, origin, dest, departure, weight_lb)
 
+    routed = time.monotonic()
     sampled = [
         sample_checkpoints(r.coords, r.segment_seconds, departure, interval_mi) for r in routes
     ]
     all_points = [(c.lat, c.lon) for cps in sampled for c in cps]
     last_eta = max(c.eta for cps in sampled for c in cps)
     forecast = fetch_forecast(all_points, departure, last_eta)
+    log.info(
+        "plan via %s: %d routes in %.1fs, %d checkpoint forecasts in %.1fs",
+        provider.name,
+        len(routes),
+        routed - started,
+        len(all_points),
+        time.monotonic() - routed,
+    )
 
     options = []
     for idx, (route, cps) in enumerate(zip(routes, sampled, strict=True)):
@@ -96,16 +108,23 @@ def _three_routes(provider, origin, dest, departure, weight_lb) -> tuple[list[Ro
     for r in sorted(candidates, key=lambda r: r.duration_s):
         _add_if_distinct(routes, r, fastest)
 
-    for via in _via_points(fastest):
-        if len(routes) >= ROUTE_COUNT:
-            break
-        try:
-            forced = provider.routes(origin, dest, departure, weight_lb, via=via)
-        except UpstreamError as exc:
-            log.info("via-point alternative failed: %s", exc)
-            continue
-        if forced:
-            _add_if_distinct(routes, forced[0], fastest)
+    if len(routes) < ROUTE_COUNT:
+
+        def via_route(via: LatLon) -> Route | None:
+            try:
+                forced = provider.routes(origin, dest, departure, weight_lb, via=via)
+            except UpstreamError as exc:
+                log.info("via-point alternative failed: %s", exc)
+                return None
+            return forced[0] if forced else None
+
+        # Requested together, then considered in order, so the result is the
+        # same as asking one at a time.
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            forced_routes = list(pool.map(via_route, _via_points(fastest)))
+        for forced in forced_routes:
+            if forced and len(routes) < ROUTE_COUNT:
+                _add_if_distinct(routes, forced, fastest)
 
     warnings = []
     if len(routes) < ROUTE_COUNT:
