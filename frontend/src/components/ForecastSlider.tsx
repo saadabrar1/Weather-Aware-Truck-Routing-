@@ -9,6 +9,8 @@ type Props = {
   error: string | null;
 };
 
+const TICKS = [0, 12, 24, 36, 48];
+
 // Hour 0 is the departure hour; the heatmap shows the forecast at start + hour.
 export default function ForecastSlider({ start, hours, hour, onChange, loading, error }: Props) {
   const at = start ? new Date(new Date(start).getTime() + hour * 3_600_000) : null;
@@ -41,8 +43,19 @@ export default function ForecastSlider({ start, hours, hour, onChange, loading, 
           onChange={(e) => onChange(Number(e.target.value))}
           aria-label="Forecast hour after departure"
           aria-valuetext={at ? `${hour} hours after departure, ${formatTime(at)}` : undefined}
+          list="forecast-ticks"
           className="accent-turq w-full disabled:opacity-40"
         />
+      </div>
+      <datalist id="forecast-ticks">
+        {TICKS.map((t) => (
+          <option key={t} value={t} />
+        ))}
+      </datalist>
+      <div className="mt-0.5 ml-[4.75rem] flex justify-between text-[11px] text-slate-400 tabular-nums">
+        {TICKS.map((t) => (
+          <span key={t}>{t}h</span>
+        ))}
       </div>
       <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-400">
         {LEVELS.map((l) => (

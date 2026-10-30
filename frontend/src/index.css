@@ -43,3 +43,9 @@ body {
 .maplibregl-ctrl-attrib a {
   @apply text-slate-300!;
 }
+
+/* One visible keyboard focus style everywhere; mouse clicks don't show it. */
+:focus-visible {
+  outline: 2px solid var(--color-turq);
+  outline-offset: 2px;
+}

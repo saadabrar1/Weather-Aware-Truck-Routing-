@@ -117,7 +117,7 @@ export default function TripForm({ loading, onSubmit }: Props) {
       <button
         type="submit"
         disabled={!valid || loading}
-        className="bg-teal shadow-teal/20 disabled:bg-ink-700 w-full rounded-lg py-2.5 text-sm font-bold text-white shadow-lg transition hover:bg-[#009494] disabled:cursor-not-allowed disabled:text-slate-500 disabled:shadow-none"
+        className="bg-teal shadow-teal/20 disabled:bg-ink-700 w-full rounded-lg py-2.5 text-sm font-bold text-white shadow-lg transition hover:bg-[#009494] disabled:cursor-not-allowed disabled:text-slate-400 disabled:shadow-none"
       >
         {loading ? "Checking routes and forecasts…" : "Find the safest route"}
       </button>
