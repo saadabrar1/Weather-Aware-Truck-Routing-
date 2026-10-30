@@ -7,7 +7,7 @@ const TICK_MS = 100;
 const FEATURES = [
   {
     title: "3 route options",
-    body: "Every trip is compared across three distinct routes from a truck-aware routing API.",
+    body: "Every trip is compared across three distinct routes, ranked by weather risk, then time.",
     Scene: RoutesScene,
   },
   {
@@ -17,7 +17,7 @@ const FEATURES = [
   },
   {
     title: "Load-aware risk",
-    body: "The same wind is riskier for a heavier truck: load rules raise the wind level.",
+    body: "The same wind is riskier for a heavier truck: over 30,000 lb, 45–54 mph becomes No Travel.",
     Scene: LoadScene,
   },
   {
@@ -125,7 +125,7 @@ export default function FeatureCarousel() {
             aria-selected={i === active}
             aria-controls={`feature-slide-${i}`}
             onClick={() => go(i)}
-            className={`relative overflow-hidden rounded-xl border p-4 text-left transition ${
+            className={`relative overflow-hidden rounded-xl border p-4 text-left transition duration-200 hover:-translate-y-0.5 motion-reduce:hover:translate-y-0 ${
               i === active
                 ? "border-turq/50 bg-ink-800"
                 : "border-ink-700 bg-ink-900 hover:bg-ink-800"
@@ -370,65 +370,187 @@ function EtaScene({ animate, cycle }: SceneProps) {
   );
 }
 
-// 3. One wind speed, two loads: the heavier truck crosses the load rule.
-function LoadScene({ animate, cycle }: SceneProps) {
-  const panel = (x: number, weight: string, level: number, rule: string) => (
+// 3. One wind speed, two loads. A weight bar with the 30,000 lb limit marked
+// shows why the same wind grades differently: the heavier truck crosses it.
+const LOAD_SCALE_LB = 50_000;
+const LOAD_LIMIT_LB = 30_000;
+
+function Truck({ weight }: { weight: string }) {
+  return (
+    <g>
+      <rect width="150" height="50" rx="6" fill="#2c3f4a" />
+      <rect x="6" y="6" width="138" height="3" rx="1.5" fill="#3b5260" />
+      <text x="75" y="33" textAnchor="middle" fill={C.text} fontSize="15" fontWeight="700">
+        {weight}
+      </text>
+      <path d="M156 50 V18 a6 6 0 0 1 6 -6 h22 l14 16 v22 z" fill="#3b5260" />
+      <path d="M166 18 h16 l9 11 h-25 z" fill="#0f171c" />
+      {[22, 52, 128, 180].map((x) => (
+        <g key={x}>
+          <circle cx={x} cy="56" r="10" fill={C.bg} stroke={C.dim} strokeWidth="3" />
+          <circle cx={x} cy="56" r="3" fill={C.dim} />
+        </g>
+      ))}
+    </g>
+  );
+}
+
+function LoadCard(props: {
+  x: number;
+  weightLb: number;
+  level: number;
+  reason: string;
+  animate: boolean;
+  cycle: number;
+}) {
+  const { x, weightLb, level, reason, animate, cycle } = props;
+  const barW = 282;
+  const fillW = (barW * weightLb) / LOAD_SCALE_LB;
+  const limitX = 24 + (barW * LOAD_LIMIT_LB) / LOAD_SCALE_LB;
+  const over = weightLb > LOAD_LIMIT_LB;
+  const color = LEVELS[level].color;
+  return (
     <g transform={`translate(${x} 104)`}>
-      <rect width="300" height="214" rx="14" fill={C.card} stroke="#2c3f4a" />
-      <g transform="translate(30 36)">
-        <rect width="120" height="54" rx="6" fill="#2c3f4a" />
-        <rect x="124" y="14" width="50" height="40" rx="6" fill="#3b5260" />
-        <circle cx="28" cy="60" r="10" fill={C.bg} stroke={C.dim} strokeWidth="3" />
-        <circle cx="100" cy="60" r="10" fill={C.bg} stroke={C.dim} strokeWidth="3" />
-        <circle cx="150" cy="60" r="10" fill={C.bg} stroke={C.dim} strokeWidth="3" />
-        <text x="60" y="33" textAnchor="middle" fill={C.text} fontSize="15" fontWeight="700">
-          {weight}
-        </text>
+      <rect
+        width="330"
+        height="236"
+        rx="14"
+        fill={C.card}
+        stroke={over ? color : "#2c3f4a"}
+        strokeOpacity={over ? 0.6 : 1}
+      />
+      <g transform="translate(70 18)">
+        <Truck weight={`${weightLb.toLocaleString("en-US")} lb`} />
       </g>
-      <text x="30" y="140" fill={C.dim} fontSize="12" fontWeight="600" letterSpacing="1">
+
+      <text x="24" y="122" fill={C.dim} fontSize="11" fontWeight="700" letterSpacing="1">
+        GROSS WEIGHT
+      </text>
+      <text x={limitX} y="122" textAnchor="middle" fill={C.turq} fontSize="11" fontWeight="700">
+        30,000 lb limit
+      </text>
+      <rect x="24" y="132" width={barW} height="8" rx="4" fill="#0f171c" />
+      <rect x="24" y="132" width={fillW} height="8" rx="4" fill={over ? color : C.dim}>
+        {animate && (
+          <animate
+            begin="indefinite"
+            ref={start}
+            key={cycle}
+            attributeName="width"
+            from="0"
+            to={fillW}
+            dur="1.2s"
+            fill="freeze"
+            calcMode="spline"
+            keySplines="0.2 0.8 0.2 1"
+          />
+        )}
+      </rect>
+      <line
+        x1={limitX}
+        x2={limitX}
+        y1="127"
+        y2="145"
+        stroke={C.turq}
+        strokeWidth="2"
+        strokeDasharray="3 2"
+      />
+      <text x="24" y="160" fill="#64748b" fontSize="10">
+        0
+      </text>
+      <text x={24 + barW} y="160" textAnchor="end" fill="#64748b" fontSize="10">
+        50,000 lb
+      </text>
+
+      <text x="24" y="188" fill={C.dim} fontSize="11" fontWeight="700" letterSpacing="1">
         RISK
       </text>
-      <text x="30" y="168" fill={LEVELS[level].color} fontSize="24" fontWeight="800">
+      <text x="24" y="216" fill={color} fontSize="24" fontWeight="800">
         {LEVELS[level].label}
       </text>
-      <text x="30" y="194" fill={C.dim} fontSize="12">
-        {rule}
+      <text x={24 + barW} y="214" textAnchor="end" fill={C.dim} fontSize="12">
+        {reason}
       </text>
     </g>
   );
+}
+
+function LoadScene({ animate, cycle }: SceneProps) {
   return (
-    <Svg label="The same 47 mph wind is Severe for 25,000 lb and No Travel for 35,000 lb">
-      <g transform="translate(410 62)">
-        <text textAnchor="middle" fill={C.text} fontSize="20" fontWeight="800">
+    <Svg label="At 47 mph wind, a 25,000 lb truck is Severe and a 35,000 lb truck is No Travel, because 45 to 54 mph over 30,000 lb is No Travel">
+      <g transform="translate(410 0)">
+        <rect
+          x="-150"
+          y="28"
+          width="300"
+          height="46"
+          rx="23"
+          fill={C.card}
+          stroke={C.turq}
+          strokeOpacity="0.45"
+        />
+        <g transform="translate(-134 51)">
+          {[0, 1, 2].map((i) => (
+            <path
+              key={i}
+              d={`M0 ${-8 + i * 8} q 8 -4 16 0 t 16 0`}
+              fill="none"
+              stroke={C.turq}
+              strokeWidth="2"
+              strokeLinecap="round"
+            >
+              {animate && (
+                <animateTransform
+                  begin="indefinite"
+                  ref={start}
+                  key={cycle}
+                  attributeName="transform"
+                  type="translate"
+                  values="-3 0; 3 0; -3 0"
+                  dur={`${1.4 + i * 0.3}s`}
+                  repeatCount="indefinite"
+                />
+              )}
+            </path>
+          ))}
+        </g>
+        <text x="24" y="57" textAnchor="middle" fill={C.text} fontSize="17" fontWeight="800">
           47 mph wind
+          <tspan fill={C.dim} fontSize="12" fontWeight="600" dx="8">
+            45–54 mph band
+          </tspan>
         </text>
-        {[0, 1, 2].map((i) => (
-          <path
-            key={i}
-            d={`M${-120 + i * 20} ${18 + i * 10} q 40 -14 80 0 t 80 0`}
-            fill="none"
-            stroke={C.turq}
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            opacity="0.7"
-          >
-            {animate && (
-              <animateTransform
-                begin="indefinite"
-                ref={start}
-                key={cycle}
-                attributeName="transform"
-                type="translate"
-                values="-14 0; 14 0; -14 0"
-                dur={`${1.6 + i * 0.3}s`}
-                repeatCount="indefinite"
-              />
-            )}
-          </path>
-        ))}
+        <path
+          d="M-60 74 C -60 92, -185 88, -185 104"
+          fill="none"
+          stroke="#2c3f4a"
+          strokeWidth="2"
+          strokeDasharray="4 4"
+        />
+        <path
+          d="M60 74 C 60 92, 185 88, 185 104"
+          fill="none"
+          stroke="#2c3f4a"
+          strokeWidth="2"
+          strokeDasharray="4 4"
+        />
       </g>
-      {panel(80, "25,000 lb", 3, "45–54 mph")}
-      {panel(440, "35,000 lb", 4, "45–54 mph + over 30,000 lb")}
+      <LoadCard
+        x={60}
+        weightLb={25_000}
+        level={3}
+        reason="under the limit"
+        animate={animate}
+        cycle={cycle}
+      />
+      <LoadCard
+        x={430}
+        weightLb={35_000}
+        level={4}
+        reason="over the limit"
+        animate={animate}
+        cycle={cycle}
+      />
     </Svg>
   );
 }
