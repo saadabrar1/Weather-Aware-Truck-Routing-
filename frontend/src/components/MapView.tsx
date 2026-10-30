@@ -4,10 +4,16 @@ import {
   LngLatBounds,
   Map as MapLibre,
   Popup,
+  setWorkerUrl,
 } from "maplibre-gl";
+// MapLibre finds its worker next to its own module, which bundling moves.
+// Point it at the worker file explicitly so dev and production builds agree.
+import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
 import { useEffect, useRef, useState } from "react";
 import type { Checkpoint, Heatmap, Plan } from "../api";
 import { LEVELS, ROUTE_LETTERS, formatTime } from "../risk";
+
+setWorkerUrl(workerUrl);
 
 const STYLE_URL = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
 const EMPTY: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: [] };
@@ -18,6 +24,21 @@ const levelColor: ExpressionSpecification = [
   ...LEVELS.flatMap((l, i) => [i, l.color]),
   "#94a3b8",
 ] as unknown as ExpressionSpecification;
+
+// Colour each corridor point by its risk level at the given forecast hour.
+function heatColor(hour: number): ExpressionSpecification {
+  return [
+    "match",
+    ["get", `h${hour}`],
+    ...LEVELS.flatMap((l, i) => [i, l.color]),
+    "rgba(0,0,0,0)",
+  ] as unknown as ExpressionSpecification;
+}
+
+// Calm (Low) is the usual case, so it stays a faint wash and real risk stands out.
+function heatOpacity(hour: number): ExpressionSpecification {
+  return ["case", ["==", ["get", `h${hour}`], 0], 0.14, 0.32] as ExpressionSpecification;
+}
 
 type Props = {
   plan: Plan | null;
@@ -50,27 +71,21 @@ export default function MapView({ plan, selectedId, onSelect, heatmap, hour }: P
       map.addSource("routes", { type: "geojson", data: EMPTY });
       map.addSource("checkpoints", { type: "geojson", data: EMPTY });
 
+      // The heatmap is drawn as heavily blurred circles rather than a MapLibre
+      // `heatmap` layer. A heatmap layer adds overlapping points together, so
+      // a cluster of calm points would read as risk; here each point keeps the
+      // colour of its own risk level and neighbours blend at the edges.
       map.addLayer({
         id: "heat",
-        type: "heatmap",
+        type: "circle",
         source: "heat",
         paint: {
-          "heatmap-weight": 0,
+          "circle-color": heatColor(0),
           // Points sit ~0.25° apart; the radius doubles per zoom level so the
           // blobs keep overlapping into one continuous corridor surface.
-          "heatmap-radius": ["interpolate", ["exponential", 2], ["zoom"], 3, 4, 10, 512],
-          "heatmap-intensity": 0.7,
-          "heatmap-opacity": 0.75,
-          "heatmap-color": [
-            "interpolate",
-            ["linear"],
-            ["heatmap-density"],
-            0, "rgba(0,0,0,0)",
-            0.12, "rgba(234,179,8,0.45)",
-            0.35, LEVELS[2].color,
-            0.6, LEVELS[3].color,
-            0.85, LEVELS[4].color,
-          ],
+          "circle-radius": ["interpolate", ["exponential", 2], ["zoom"], 3, 7, 11, 1792],
+          "circle-blur": 1,
+          "circle-opacity": heatOpacity(0),
         },
       });
       map.addLayer({
@@ -192,7 +207,10 @@ export default function MapView({ plan, selectedId, onSelect, heatmap, hour }: P
     const map = mapRef.current;
     if (!map || !ready) return;
     const frame = requestAnimationFrame(() =>
-      map.setPaintProperty("heat", "heatmap-weight", ["/", ["get", `h${hour}`], 4]),
+      {
+        map.setPaintProperty("heat", "circle-color", heatColor(hour));
+        map.setPaintProperty("heat", "circle-opacity", heatOpacity(hour));
+      },
     );
     return () => cancelAnimationFrame(frame);
   }, [hour, ready]);
