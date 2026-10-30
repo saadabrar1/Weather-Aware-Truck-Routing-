@@ -1,0 +1,51 @@
+# Development: `docker compose up` runs Django and Vite with live reload.
+#   App:  http://localhost:5173   (Vite proxies /api to Django)
+# Production image locally: `docker compose --profile prod up --build app`
+#   App:  http://localhost:8000
+
+services:
+  backend:
+    image: python:3.12-slim
+    working_dir: /app/backend
+    command: >
+      sh -c "pip install -q -r requirements-dev.txt &&
+             python manage.py runserver 0.0.0.0:8000"
+    environment:
+      DJANGO_DEBUG: "true"
+      DJANGO_ALLOWED_HOSTS: "*"
+      HERE_API_KEY: ${HERE_API_KEY:-}
+    volumes:
+      - ./backend:/app/backend
+      - pip-cache:/root/.cache/pip
+    ports:
+      - "8000:8000"
+
+  frontend:
+    image: node:22-alpine
+    working_dir: /app/frontend
+    command: sh -c "npm ci --no-audit --no-fund && npm run dev"
+    environment:
+      API_PROXY_TARGET: http://backend:8000
+      VITE_POLL: "1"
+    volumes:
+      - ./frontend:/app/frontend
+      # Keep the container's Linux node_modules apart from the host's.
+      - frontend-node-modules:/app/frontend/node_modules
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
+  app:
+    profiles: ["prod"]
+    build: .
+    environment:
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-local-only-not-secret}
+      DJANGO_ALLOWED_HOSTS: "localhost,127.0.0.1"
+      HERE_API_KEY: ${HERE_API_KEY:-}
+    ports:
+      - "8000:8000"
+
+volumes:
+  pip-cache:
+  frontend-node-modules:

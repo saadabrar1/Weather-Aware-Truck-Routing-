@@ -13,5 +13,8 @@ export default defineConfig({
     host: true,
     port: 5173,
     proxy: { "/api": apiTarget },
+    // File events from a Windows/macOS host do not reach a Docker container;
+    // docker-compose turns on polling so edits still hot-reload.
+    watch: process.env.VITE_POLL ? { usePolling: true, interval: 300 } : undefined,
   },
 });
