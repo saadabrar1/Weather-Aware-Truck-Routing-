@@ -1,6 +1,21 @@
 @import "tailwindcss";
 @import "maplibre-gl/dist/maplibre-gl.css";
 
+/* Palette taken from the trucking-dashboard look this app is built for:
+   deep teal surfaces, teal/turquoise accents. Risk colours live in risk.ts
+   and are never reused for UI chrome, so a colour always means one thing. */
+@theme {
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --color-ink-950: #0b1014;
+  --color-ink-900: #0f171c;
+  --color-ink-800: #16222a;
+  --color-ink-700: #1f2f38;
+  --color-ink-600: #2c3f4a;
+  --color-deep: #043344;
+  --color-teal: #008080;
+  --color-turq: #40e0d0;
+}
+
 html,
 body,
 #root {
@@ -8,9 +23,23 @@ body,
 }
 
 body {
-  @apply bg-slate-50 text-slate-900 antialiased;
+  @apply bg-ink-950 font-sans text-slate-100 antialiased;
+  color-scheme: dark;
 }
 
 .maplibregl-popup-content {
-  @apply rounded-lg px-3 py-2 shadow-lg;
+  @apply border-ink-600 bg-ink-900 rounded-lg border px-3 py-2 text-slate-100 shadow-xl;
+}
+.maplibregl-popup-tip {
+  border-top-color: var(--color-ink-900) !important;
+  border-bottom-color: var(--color-ink-900) !important;
+}
+.maplibregl-popup-close-button {
+  @apply px-1.5 text-slate-400 hover:bg-transparent hover:text-white;
+}
+.maplibregl-ctrl-attrib {
+  @apply bg-ink-900/80! text-slate-400!;
+}
+.maplibregl-ctrl-attrib a {
+  @apply text-slate-300!;
 }

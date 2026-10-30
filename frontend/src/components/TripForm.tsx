@@ -1,5 +1,6 @@
 import { type FormEvent, useState } from "react";
 import type { Place, PlanRequest } from "../api";
+import { fieldClass, labelClass } from "../ui";
 import PlaceInput from "./PlaceInput";
 
 const INTERVALS = [10, 25, 50];
@@ -43,7 +44,12 @@ export default function TripForm({ loading, onSubmit }: Props) {
 
   return (
     <form onSubmit={submit} className="space-y-3">
-      <PlaceInput label="Origin" value={origin} onChange={setOrigin} placeholder="e.g. Denver, CO" />
+      <PlaceInput
+        label="Origin"
+        value={origin}
+        onChange={setOrigin}
+        placeholder="e.g. Denver, CO"
+      />
       <PlaceInput
         label="Destination"
         value={destination}
@@ -52,7 +58,7 @@ export default function TripForm({ loading, onSubmit }: Props) {
       />
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label htmlFor="departure" className="mb-1 block text-xs font-medium text-slate-600">
+          <label htmlFor="departure" className={labelClass}>
             Departure
           </label>
           <input
@@ -62,36 +68,37 @@ export default function TripForm({ loading, onSubmit }: Props) {
             value={departure}
             min={localInputValue(new Date())}
             onChange={(e) => setDeparture(e.target.value)}
-            className="w-full rounded-md border border-slate-300 bg-white px-2 py-2 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20"
+            className={`${fieldClass} px-2`}
           />
         </div>
         <div>
-          <label htmlFor="weight" className="mb-1 block text-xs font-medium text-slate-600">
+          <label htmlFor="weight" className={labelClass}>
             Load weight (lb)
           </label>
           <input
             id="weight"
             type="number"
+            inputMode="numeric"
             required
             min={1}
             max={200000}
             step="any"
             value={weight}
             onChange={(e) => setWeight(e.target.value)}
-            className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20"
+            className={fieldClass}
           />
         </div>
       </div>
       <fieldset>
-        <legend className="mb-1 block text-xs font-medium text-slate-600">
-          Weather checkpoint every
-        </legend>
-        <div className="grid grid-cols-3 rounded-md border border-slate-300 bg-white p-0.5 text-sm">
+        <legend className={labelClass}>Weather checkpoint every</legend>
+        <div className="border-ink-600 bg-ink-800 grid grid-cols-3 gap-1 rounded-lg border p-1 text-sm">
           {INTERVALS.map((mi) => (
             <label
               key={mi}
-              className={`cursor-pointer rounded py-1.5 text-center ${
-                intervalMi === mi ? "bg-slate-900 font-medium text-white" : "text-slate-700"
+              className={`has-focus-visible:ring-turq/40 cursor-pointer rounded-md py-1.5 text-center transition has-focus-visible:ring-2 ${
+                intervalMi === mi
+                  ? "bg-teal font-semibold text-white"
+                  : "hover:bg-ink-700 text-slate-300"
               }`}
             >
               <input
@@ -110,7 +117,7 @@ export default function TripForm({ loading, onSubmit }: Props) {
       <button
         type="submit"
         disabled={!valid || loading}
-        className="w-full rounded-md bg-blue-700 py-2.5 text-sm font-semibold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+        className="bg-teal shadow-teal/20 disabled:bg-ink-700 w-full rounded-lg py-2.5 text-sm font-bold text-white shadow-lg transition hover:bg-[#009494] disabled:cursor-not-allowed disabled:text-slate-500 disabled:shadow-none"
       >
         {loading ? "Checking routes and forecasts…" : "Find the safest route"}
       </button>

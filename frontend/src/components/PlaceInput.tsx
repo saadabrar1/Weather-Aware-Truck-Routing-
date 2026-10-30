@@ -1,5 +1,6 @@
 import { useEffect, useId, useState } from "react";
 import { api, type Place } from "../api";
+import { fieldClass, labelClass } from "../ui";
 
 type Props = {
   label: string;
@@ -47,7 +48,7 @@ export default function PlaceInput({ label, value, onChange, placeholder }: Prop
 
   return (
     <div className="relative">
-      <label htmlFor={id} className="mb-1 block text-xs font-medium text-slate-600">
+      <label htmlFor={id} className={labelClass}>
         {label}
       </label>
       <input
@@ -58,7 +59,7 @@ export default function PlaceInput({ label, value, onChange, placeholder }: Prop
         role="combobox"
         aria-expanded={open}
         aria-controls={`${id}-list`}
-        className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20"
+        className={fieldClass}
         onChange={(e) => {
           setText(e.target.value);
           if (value) onChange(null);
@@ -79,14 +80,14 @@ export default function PlaceInput({ label, value, onChange, placeholder }: Prop
         <ul
           id={`${id}-list`}
           role="listbox"
-          className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md border border-slate-200 bg-white py-1 text-sm shadow-lg"
+          className="border-ink-600 bg-ink-800 absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-lg border py-1 text-sm shadow-xl shadow-black/40"
         >
           {options.map((p, i) => (
             <li
               key={`${p.lat},${p.lon},${i}`}
               role="option"
               aria-selected={i === active}
-              className={`cursor-pointer px-3 py-1.5 ${i === active ? "bg-blue-50" : ""}`}
+              className={`cursor-pointer px-3 py-1.5 text-slate-200 ${i === active ? "bg-teal/25 text-white" : ""}`}
               onMouseDown={() => choose(p)}
               onMouseEnter={() => setActive(i)}
             >
