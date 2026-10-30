@@ -2,12 +2,14 @@ import { useRef, useState } from "react";
 import { api, type Heatmap, type Plan, type PlanRequest } from "../api";
 import ForecastSlider from "../components/ForecastSlider";
 import Logo from "../components/Logo";
+import MapLegend from "../components/MapLegend";
 import MapView from "../components/MapView";
 import RouteCards, { type CheckpointFocus } from "../components/RouteCards";
 import TripForm from "../components/TripForm";
 
 export default function Planner() {
   const [plan, setPlan] = useState<Plan | null>(null);
+  const [request, setRequest] = useState<PlanRequest | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -19,8 +21,22 @@ export default function Planner() {
   // Ignore responses from a search the user has already replaced.
   const latest = useRef(0);
 
+  const loadHeatmap = async (result: Plan, req: PlanRequest, id: number) => {
+    setHeatLoading(true);
+    setHeatError(null);
+    try {
+      const heat = await api.heatmap(result.corridor, req.departure, req.weight_lb);
+      if (id === latest.current) setHeatmap(heat);
+    } catch (e) {
+      if (id === latest.current) setHeatError((e as Error).message);
+    } finally {
+      if (id === latest.current) setHeatLoading(false);
+    }
+  };
+
   const search = async (req: PlanRequest) => {
     const id = ++latest.current;
+    setRequest(req);
     setLoading(true);
     setError(null);
     setHeatmap(null);
@@ -33,17 +49,8 @@ export default function Planner() {
       setPlan(result);
       setSelectedId(result.recommended_id);
       setLoading(false);
-
       // Routes are on screen first; the corridor forecast fills in behind them.
-      setHeatLoading(true);
-      try {
-        const heat = await api.heatmap(result.corridor, req.departure, req.weight_lb);
-        if (id === latest.current) setHeatmap(heat);
-      } catch (e) {
-        if (id === latest.current) setHeatError((e as Error).message);
-      } finally {
-        if (id === latest.current) setHeatLoading(false);
-      }
+      await loadHeatmap(result, req, id);
     } catch (e) {
       if (id !== latest.current) return;
       setError((e as Error).message);
@@ -77,12 +84,21 @@ export default function Planner() {
         <div className="space-y-4 p-4">
           <TripForm loading={loading} onSubmit={search} />
           {error && (
-            <p
+            <div
               role="alert"
-              className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200"
+              className="flex items-start justify-between gap-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200"
             >
-              {error}
-            </p>
+              <span>{error}</span>
+              {request && (
+                <button
+                  type="button"
+                  onClick={() => search(request)}
+                  className="shrink-0 rounded-md border border-red-400/40 px-2 py-0.5 text-xs font-semibold text-red-100 hover:bg-red-500/20"
+                >
+                  Try again
+                </button>
+              )}
+            </div>
           )}
           {loading && <ResultsSkeleton />}
           {plan && !loading && (
@@ -108,6 +124,8 @@ export default function Planner() {
             focus={focus}
             heatmap={heatmap}
             hour={hour}
+            originLabel={request?.origin.label}
+            destinationLabel={request?.destination.label}
           />
           {!plan && !loading && (
             <div className="pointer-events-none absolute inset-x-0 top-6 flex justify-center px-4">
@@ -116,16 +134,24 @@ export default function Planner() {
               </p>
             </div>
           )}
+          {loading && <MapLoading />}
+          {plan && !loading && (
+            <div className="absolute top-3 right-3 hidden md:block">
+              <MapLegend />
+            </div>
+          )}
         </div>
         {plan && (
           <div className="border-ink-700 bg-ink-900 border-b p-2 md:absolute md:bottom-8 md:left-4 md:w-[440px] md:border-0 md:bg-transparent md:p-0">
             <ForecastSlider
-              start={heatmap?.start ?? null}
-              hours={heatmap?.hours ?? 49}
+              heatmap={heatmap}
               hour={hour}
               onChange={setHour}
               loading={heatLoading}
               error={heatError}
+              onRetry={
+                request && plan ? () => loadHeatmap(plan, request, latest.current) : undefined
+              }
             />
           </div>
         )}
@@ -134,12 +160,27 @@ export default function Planner() {
   );
 }
 
+function MapLoading() {
+  return (
+    <div
+      role="status"
+      className="bg-ink-950/50 absolute inset-0 grid place-items-center backdrop-blur-[2px]"
+    >
+      <div className="border-ink-600 bg-ink-900/95 flex items-center gap-3 rounded-xl border px-4 py-3 shadow-2xl">
+        <span className="border-turq h-5 w-5 animate-spin rounded-full border-2 border-t-transparent motion-reduce:animate-none" />
+        <span className="text-sm text-slate-200">
+          Finding 3 routes and reading the forecast at each checkpoint…
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function ResultsSkeleton() {
   return (
     <div className="space-y-2" aria-hidden>
-      <div className="bg-ink-700/70 h-20 animate-pulse rounded-xl" />
       {[0, 1, 2].map((i) => (
-        <div key={i} className="bg-ink-800 h-36 animate-pulse rounded-xl" />
+        <div key={i} className="bg-ink-800 h-40 animate-pulse rounded-xl" />
       ))}
     </div>
   );
