@@ -32,3 +32,20 @@ const timeFormat = new Intl.DateTimeFormat(undefined, {
 export function formatTime(iso: string | Date): string {
   return timeFormat.format(typeof iso === "string" ? new Date(iso) : iso);
 }
+
+// Table rows show the clock only; the zone is printed once in the column header.
+const clockFormat = new Intl.DateTimeFormat(undefined, {
+  weekday: "short",
+  hour: "numeric",
+  minute: "2-digit",
+});
+
+export function formatClock(iso: string): string {
+  return clockFormat.format(new Date(iso));
+}
+
+export function timeZoneLabel(iso: string): string {
+  return (
+    timeFormat.formatToParts(new Date(iso)).find((p) => p.type === "timeZoneName")?.value ?? ""
+  );
+}

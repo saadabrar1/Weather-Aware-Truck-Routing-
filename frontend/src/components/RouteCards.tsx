@@ -1,5 +1,12 @@
 import type { Checkpoint, Plan, RouteOption } from "../api";
-import { LEVELS, ROUTE_LETTERS, formatDuration, formatTime, peakLevel } from "../risk";
+import {
+  LEVELS,
+  ROUTE_LETTERS,
+  formatClock,
+  formatDuration,
+  peakLevel,
+  timeZoneLabel,
+} from "../risk";
 
 export type CheckpointFocus = { routeId: string; checkpoint: Checkpoint; fly: boolean } | null;
 
@@ -246,9 +253,19 @@ function CheckpointTable({ route, letter, onFocus }: TableProps) {
           <thead className="bg-ink-700 sticky top-0 text-left text-[11px] tracking-wide text-slate-300 uppercase">
             <tr>
               <th className="px-2 py-1.5 font-semibold">Mile</th>
-              <th className="px-2 py-1.5 font-semibold">ETA</th>
+              <th className="px-2 py-1.5 font-semibold">
+                ETA <Unit>{timeZoneLabel(route.checkpoints[0].eta)}</Unit>
+              </th>
               <th className="px-2 py-1.5 font-semibold">Risk</th>
-              <th className="px-2 py-1.5 font-semibold">Wind · Rain · Snow</th>
+              <th className="px-2 py-1.5 text-right font-semibold">
+                Wind <Unit>mph</Unit>
+              </th>
+              <th className="px-2 py-1.5 text-right font-semibold">
+                Rain <Unit>in/h</Unit>
+              </th>
+              <th className="px-2 py-1.5 text-right font-semibold">
+                Snow <Unit>in/h</Unit>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -269,8 +286,8 @@ function CheckpointTable({ route, letter, onFocus }: TableProps) {
                 }}
               >
                 <td className="px-2 py-1.5 tabular-nums">{Math.round(c.mile)}</td>
-                <td className="px-2 py-1.5 whitespace-nowrap">{formatTime(c.eta)}</td>
-                <td className="px-2 py-1.5">
+                <td className="px-2 py-1.5 whitespace-nowrap">{formatClock(c.eta)}</td>
+                <td className="px-2 py-1.5 whitespace-nowrap">
                   <span className="inline-flex items-center gap-1">
                     <span
                       className="h-2 w-2 rounded-full"
@@ -279,9 +296,14 @@ function CheckpointTable({ route, letter, onFocus }: TableProps) {
                     {LEVELS[c.level].label}
                   </span>
                 </td>
-                <td className="px-2 py-1.5 whitespace-nowrap text-slate-300 tabular-nums">
-                  {Math.round(c.wind_mph)} mph · {c.rain_in_hr.toFixed(2)} ·{" "}
-                  {c.snow_in_hr.toFixed(2)} in/h
+                <td className="px-2 py-1.5 text-right text-slate-300 tabular-nums">
+                  {Math.round(c.wind_mph)}
+                </td>
+                <td className="px-2 py-1.5 text-right text-slate-300 tabular-nums">
+                  {c.rain_in_hr.toFixed(2)}
+                </td>
+                <td className="px-2 py-1.5 text-right text-slate-300 tabular-nums">
+                  {c.snow_in_hr.toFixed(2)}
                 </td>
               </tr>
             ))}
@@ -289,5 +311,14 @@ function CheckpointTable({ route, letter, onFocus }: TableProps) {
         </table>
       </div>
     </section>
+  );
+}
+
+// Units sit under the column name so the cells hold only numbers.
+function Unit({ children }: { children: string }) {
+  return (
+    <span className="block text-[11px] font-normal tracking-normal text-slate-400 normal-case">
+      {children}
+    </span>
   );
 }
