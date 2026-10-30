@@ -1,0 +1,15 @@
+**/node_modules
+**/dist
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.ruff_cache
+.venv
+.git
+.github
+.claude
+.env
+.env.*
+!.env.example
+CLAUDE.md
+backend/staticfiles

@@ -45,6 +45,17 @@ DATABASES = {}
 FRONTEND_DIST = Path(os.environ.get("FRONTEND_DIST", BASE_DIR.parent / "frontend" / "dist"))
 WHITENOISE_ROOT = FRONTEND_DIST if FRONTEND_DIST.exists() else None
 WHITENOISE_INDEX_FILE = True
+# MapLibre runs its worker from an .mjs file; browsers refuse a module worker
+# served with a non-JavaScript type, which leaves the map blank.
+WHITENOISE_MIMETYPES = {".mjs": "text/javascript"}
+
+
+def _hashed_asset(path: str, url: str) -> bool:
+    """Vite puts a content hash in every /assets/ file name, so they never change."""
+    return url.startswith("/assets/")
+
+
+WHITENOISE_IMMUTABLE_FILE_TEST = _hashed_asset
 STATIC_URL = "static/"
 
 CACHES = {
