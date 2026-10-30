@@ -7,9 +7,11 @@ set -euo pipefail
 
 APP_DIR=/opt/weatherroute
 
-echo "==> Docker"
+echo "==> Docker (Ubuntu's own packages, which also cover brand-new releases)"
 if ! command -v docker >/dev/null; then
-  curl -fsSL https://get.docker.com | sudo sh
+  sudo apt-get update -qq
+  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq docker.io docker-compose-v2
+  sudo systemctl enable --now docker
 fi
 sudo usermod -aG docker "$USER"
 

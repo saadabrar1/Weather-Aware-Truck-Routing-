@@ -36,5 +36,5 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD python -c "import os, urllib.request; urllib.request.urlopen(f'http://127.0.0.1:{os.environ[\"PORT\"]}/api/health', timeout=4)"
 
 # Requests wait on routing and forecast APIs, so threads (not more processes)
-# carry the concurrency. Hosts such as Render and Railway set $PORT.
+# carry the concurrency. The port comes from $PORT (8000 by default).
 CMD ["sh", "-c", "exec gunicorn config.wsgi:application --bind 0.0.0.0:${PORT} --worker-class gthread --workers 2 --threads 8 --timeout 120 --access-logfile -"]
