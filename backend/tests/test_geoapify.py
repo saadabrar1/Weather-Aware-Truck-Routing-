@@ -2,6 +2,7 @@
 
 import json
 from datetime import UTC, datetime, timedelta
+from urllib.parse import unquote
 
 import pytest
 import responses
@@ -145,3 +146,37 @@ def test_plan_with_geoapify_forces_three_routes_and_sends_truck_mode():
     assert len(data["routes"]) == 3
     first = responses.calls[0].request.url
     assert "mode=truck" in first and "apiKey=test-key" in first
+    # Routes 2 and 3 come from avoiding the middle of the routes found before.
+    avoided = [unquote(c.request.url).count("location:") for c in responses.calls[1:3]]
+    assert avoided == [5, 10]
+
+
+@responses.activate
+def test_failed_avoid_falls_back_to_via_points():
+    bearings = iter([0, 60, -60, 120, -120])
+
+    def route_cb(request):
+        if "avoid=" in request.url:
+            return 400, {}, json.dumps({"message": "No suitable edges near location."})
+        return 200, {}, json.dumps({"features": [_feature(next(bearings), 2.0)]})
+
+    responses.add_callback(responses.GET, "https://api.geoapify.com/v1/routing", callback=route_cb)
+    responses.add_callback(
+        responses.GET,
+        "https://api.open-meteo.com/v1/forecast",
+        callback=weather_callback(lambda lon: 5.0),
+    )
+    depart = (datetime.now(UTC) + timedelta(hours=2)).replace(minute=0, second=0, microsecond=0)
+    res = APIClient().post(
+        "/api/plan",
+        {
+            "origin": {"label": "Denver", "lat": 39.74, "lon": -104.99},
+            "destination": {"label": "Cheyenne", "lat": 41.14, "lon": -104.82},
+            "departure": depart.isoformat(),
+            "weight_lb": 40_000,
+            "interval_mi": 25,
+        },
+        format="json",
+    )
+    assert res.status_code == 200
+    assert len(res.json()["routes"]) == 3

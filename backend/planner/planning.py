@@ -98,8 +98,9 @@ def corridor_forecast(points: list[LatLon], departure: datetime, weight_lb: floa
 
 def _three_routes(provider, origin, dest, departure, weight_lb) -> tuple[list[Route], list[str]]:
     """The provider's own alternatives first. When it offers fewer than three
-    distinct ones, force more through a via point to either side of the
-    fastest route's midpoint."""
+    distinct ones, providers that can avoid locations are asked for the best
+    route avoiding the middle of every route found so far; anything still
+    missing is forced through a via point beside the fastest route's midpoint."""
     candidates = provider.routes(origin, dest, departure, weight_lb)
     if not candidates:
         raise UpstreamError("No route found between those places.")
@@ -107,6 +108,22 @@ def _three_routes(provider, origin, dest, departure, weight_lb) -> tuple[list[Ro
     routes: list[Route] = []
     for r in sorted(candidates, key=lambda r: r.duration_s):
         _add_if_distinct(routes, r, fastest)
+
+    # Avoided points lie on roads already in use, so unlike a via point pushed
+    # off into open country they always resolve, and each answer is a road
+    # the earlier routes don't take.
+    while len(routes) < ROUTE_COUNT and getattr(provider, "supports_avoid", False):
+        avoid = [p for r in routes for p in _avoid_points(r)]
+        try:
+            forced = provider.routes(origin, dest, departure, weight_lb, avoid=avoid)
+        except UpstreamError as exc:
+            log.info("avoid-based alternative failed: %s", exc)
+            break
+        found = len(routes)
+        if forced:
+            _add_if_distinct(routes, forced[0], fastest)
+        if len(routes) == found:
+            break
 
     if len(routes) < ROUTE_COUNT:
 
@@ -130,6 +147,17 @@ def _three_routes(provider, origin, dest, departure, weight_lb) -> tuple[list[Ro
     if len(routes) < ROUTE_COUNT:
         warnings.append(f"Only {len(routes)} distinct route(s) exist between these places.")
     return routes[:ROUTE_COUNT], warnings
+
+
+AVOID_FRACTIONS = (0.25, 0.4, 0.5, 0.6, 0.75)
+
+
+def _avoid_points(route: Route) -> list[LatLon]:
+    """Points through the middle of a route. Its ends are left alone: near the
+    origin and destination every route has to share the same few roads."""
+    miles = cumulative_miles(route.coords)
+    zeros = [0.0] * len(route.coords)
+    return [locate(miles[-1] * f, route.coords, miles, zeros)[:2] for f in AVOID_FRACTIONS]
 
 
 def _via_points(route: Route) -> list[LatLon]:

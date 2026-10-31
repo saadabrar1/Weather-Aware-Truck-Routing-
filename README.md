@@ -85,8 +85,11 @@ than a 500; a provider's rate limit fails fast instead of waiting a minute.
 ## How the logic works
 
 **Routes.** The routing API's own alternatives are used first. When it offers fewer
-than three distinct ones (the public OSRM server often returns one), more are forced
-through **via points** to either side of the fastest route's midpoint. A candidate is
+than three distinct ones, providers that can avoid locations (Geoapify) are asked for
+the best route that **avoids the middle of every route found so far**: those points
+are on real roads, so each answer is a genuinely different road. Anything still
+missing (and every gap with OSRM, which often returns one route) is forced through
+**via points** to either side of the fastest route's midpoint. A candidate is
 dropped if more than 85% of it overlaps a kept route or it takes over 1.6× the
 fastest time, so the three options are real alternatives.
 
@@ -154,7 +157,7 @@ code and pinned by tests.
 
 | Need | Used | Why this one |
 |---|---|---|
-| Routing | **HERE Routing v8** (truck, exact gross weight) if `HERE_API_KEY` is set; else **Geoapify** (truck profile chosen by weight class: light ≤ 3.5 t, medium ≤ 7.5 t, truck ≤ 22 t, heavy above) if `GEOAPIFY_API_KEY` is set; else the public **OSRM** server (car) | Truck-aware routing where a key is available. OSRM needs no key, so the app still runs with zero setup. Geoapify returns one route per request; the planner forces the other two through via points. |
+| Routing | **HERE Routing v8** (truck, exact gross weight) if `HERE_API_KEY` is set; else **Geoapify** (truck profile chosen by weight class: light ≤ 3.5 t, medium ≤ 7.5 t, truck ≤ 22 t, heavy above) if `GEOAPIFY_API_KEY` is set; else the public **OSRM** server (car) | Truck-aware routing where a key is available. OSRM needs no key, so the app still runs with zero setup. Geoapify returns one route per request; the planner gets the other two by avoiding the earlier routes' middles. |
 | Weather | **Open-Meteo** | Free, no key, hourly to 16 days, **many locations per request** (the heatmap needs that), rain/showers/snow per hour. |
 | Place search | **HERE Geocoding**, else **Geoapify Autocomplete**, else **Photon** | All three are built for type-ahead; Nominatim's policy forbids autocomplete. |
 | Map | **MapLibre GL** + CARTO tiles | Open source, no token, GPU-rendered layers, which is what keeps the slider smooth. |
@@ -213,7 +216,7 @@ Settings come from environment variables; see [`.env.example`](.env.example). On
 ## Tests and CI/CD
 
 ```bash
-cd backend && pytest                 # 90 tests
+cd backend && pytest                 # 91 tests
 cd frontend && npm run build         # tsc type-check + production build
 ```
 
@@ -224,7 +227,7 @@ cd frontend && npm run build         # tsc type-check + production build
 | `test_ranking.py` (12) | each ranking rule alone, rule precedence, No Travel first, explanations |
 | `test_api.py` (12) | full plan/heatmap requests with providers mocked; validation; 503s |
 | `test_services.py` (6) | unit conversion, caching, HERE span parsing, corridor cap, geocoder |
-| `test_geoapify.py` (11) | truck class by weight, leg/step parsing, provider order, a full plan |
+| `test_geoapify.py` (12) | truck class by weight, leg/step parsing, provider order, avoid-based alternatives and their fallback |
 
 **CI** (`.github/workflows/ci.yml`, every push and PR): ruff + pytest on Python 3.12;
 Prettier, `tsc` and a production build; **gitleaks** over the full history; and a
@@ -246,7 +249,7 @@ backend/
   planner/services/    routing.py, weather.py, geocoding.py, http.py
   planner/planning.py  joins services and core into a plan and a corridor forecast
   planner/views.py     DRF endpoints; serializers.py validates input
-  tests/               90 tests
+  tests/               91 tests
 frontend/src/
   pages/               Landing.tsx (/), Planner.tsx (/app)
   components/          MapView, RouteCards, ForecastSlider, TripForm, ...

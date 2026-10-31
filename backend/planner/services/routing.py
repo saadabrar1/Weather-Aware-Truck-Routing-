@@ -167,6 +167,7 @@ class GeoapifyRouting:
     through via points, as it does for OSRM."""
 
     name = "Geoapify"
+    supports_avoid = True
 
     def routes(
         self,
@@ -176,19 +177,24 @@ class GeoapifyRouting:
         weight_lb: float,
         via: LatLon | None = None,
         alternatives: int = 2,
+        avoid: list[LatLon] | None = None,
     ) -> list[Route]:
         stops = [origin, via, dest] if via else [origin, dest]
+        params = {
+            "waypoints": "|".join(f"{p[0]},{p[1]}" for p in stops),
+            "mode": geoapify_mode(weight_lb),
+            # A via point only steers the route; it isn't a stop.
+            "intermediate_waypoint_mode": "pass_through",
+            "apiKey": settings.GEOAPIFY_API_KEY,
+        }
+        if avoid:
+            params["avoid"] = "|".join(f"location:{p[0]:.5f},{p[1]:.5f}" for p in avoid)
         data = get_json(
             "https://api.geoapify.com/v1/routing",
-            {
-                "waypoints": "|".join(f"{p[0]},{p[1]}" for p in stops),
-                "mode": geoapify_mode(weight_lb),
-                # A via point only steers the route; it isn't a stop.
-                "intermediate_waypoint_mode": "pass_through",
-                "apiKey": settings.GEOAPIFY_API_KEY,
-            },
+            params,
             provider="Geoapify routing",
-            quick=via is not None,
+            # Forced alternatives are optional: one short try each.
+            quick=bool(via or avoid),
         )
         features = data.get("features") or []
         if not features:
