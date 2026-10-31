@@ -19,12 +19,21 @@ class Place:
     lon: float
 
 
+def _provider():
+    if settings.HERE_API_KEY:
+        return "here", _here
+    if settings.GEOAPIFY_API_KEY:
+        return "geoapify", _geoapify
+    return "photon", _photon
+
+
 def search(query: str) -> list[dict]:
-    key = f"geo:{'here' if settings.HERE_API_KEY else 'photon'}:{query.lower()}"
+    name, lookup = _provider()
+    key = f"geo:{name}:{query.lower()}"
     hit = cache.get(key)
     if hit is not None:
         return hit
-    places = _here(query) if settings.HERE_API_KEY else _photon(query)
+    places = lookup(query)
     # A city often matches several map objects (boundary, centre node, ...) with
     # the same name; one suggestion per label is enough.
     unique = {p.label: p for p in reversed(places)}
@@ -43,6 +52,21 @@ def _here(query: str) -> list[Place]:
         Place(item["title"], item["position"]["lat"], item["position"]["lng"])
         for item in data.get("items", [])
     ]
+
+
+def _geoapify(query: str) -> list[Place]:
+    data = get_json(
+        "https://api.geoapify.com/v1/geocode/autocomplete",
+        {
+            "text": query,
+            "limit": LIMIT,
+            "format": "json",
+            "lang": "en",
+            "apiKey": settings.GEOAPIFY_API_KEY,
+        },
+        provider="Geoapify geocoding",
+    )
+    return [Place(r["formatted"], r["lat"], r["lon"]) for r in data.get("results", [])]
 
 
 def _photon(query: str) -> list[Place]:

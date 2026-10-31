@@ -75,10 +75,11 @@ REST_FRAMEWORK = {
     "EXCEPTION_HANDLER": "planner.views.api_exception_handler",
 }
 
-# Upstream providers. With HERE_API_KEY set, routing and geocoding use HERE's
-# truck-aware APIs; without it the app falls back to the keyless OSRM + Photon
-# demo servers so it runs with zero setup.
+# Upstream providers, first configured wins: HERE (truck routing by exact gross
+# weight), then Geoapify (truck routing by weight class); with neither key the
+# app falls back to the keyless OSRM + Photon servers so it runs with zero setup.
 HERE_API_KEY = os.environ.get("HERE_API_KEY", "")
+GEOAPIFY_API_KEY = os.environ.get("GEOAPIFY_API_KEY", "")
 OSRM_URL = os.environ.get("OSRM_URL", "https://router.project-osrm.org")
 PHOTON_URL = os.environ.get("PHOTON_URL", "https://photon.komoot.io")
 OPEN_METEO_URL = os.environ.get("OPEN_METEO_URL", "https://api.open-meteo.com")

@@ -142,5 +142,86 @@ class OsrmRouting:
         return Route(coords, seconds, route["distance"] / METERS_PER_MI, route["duration"], name)
 
 
+# Geoapify's truck profiles are classes by maximum gross weight, in tonnes.
+GEOAPIFY_TRUCK_CLASSES = (
+    (3.5, "light_truck"),
+    (7.5, "medium_truck"),
+    (22.0, "truck"),
+)
+KG_PER_TONNE = 1000
+
+
+def geoapify_mode(weight_lb: float) -> str:
+    """The lightest Geoapify truck class that can carry the load (heavy_truck above 22 t)."""
+    tonnes = weight_lb * KG_PER_LB / KG_PER_TONNE
+    for limit, mode in GEOAPIFY_TRUCK_CLASSES:
+        if tonnes <= limit:
+            return mode
+    return "heavy_truck"
+
+
+class GeoapifyRouting:
+    """Geoapify Routing with a truck profile picked from the load's gross weight.
+
+    It returns a single route per request; the planner forces the other two
+    through via points, as it does for OSRM."""
+
+    name = "Geoapify"
+
+    def routes(
+        self,
+        origin: LatLon,
+        dest: LatLon,
+        departure: datetime,
+        weight_lb: float,
+        via: LatLon | None = None,
+        alternatives: int = 2,
+    ) -> list[Route]:
+        stops = [origin, via, dest] if via else [origin, dest]
+        data = get_json(
+            "https://api.geoapify.com/v1/routing",
+            {
+                "waypoints": "|".join(f"{p[0]},{p[1]}" for p in stops),
+                "mode": geoapify_mode(weight_lb),
+                # A via point only steers the route; it isn't a stop.
+                "intermediate_waypoint_mode": "pass_through",
+                "apiKey": settings.GEOAPIFY_API_KEY,
+            },
+            provider="Geoapify routing",
+            quick=via is not None,
+        )
+        features = data.get("features") or []
+        if not features:
+            raise UpstreamError("No route found between those places.")
+        return [self._parse(f) for f in features]
+
+    @staticmethod
+    def _parse(feature: dict) -> Route:
+        """Geometry is one [lon, lat] line per leg; each leg's steps carry their
+        time and the point range they cover, which play the part of HERE's spans."""
+        coords: list[LatLon] = []
+        seconds: list[float] = []
+        lines = feature["geometry"]["coordinates"]
+        legs = feature["properties"].get("legs") or [{}] * len(lines)
+        for line, leg in zip(lines, legs, strict=True):
+            pts = [(lat, lon) for lon, lat in line]
+            spans = [
+                {"offset": st["from_index"], "duration": st["time"]} for st in leg.get("steps", [])
+            ]
+            secs = _spread_spans(pts, spans, leg.get("time", 0))
+            if coords and pts and coords[-1] == pts[0]:
+                pts = pts[1:]  # legs share their joining point
+            elif coords and pts:
+                secs = [0.0, *secs]
+            coords.extend(pts)
+            seconds.extend(secs)
+        props = feature["properties"]
+        return Route(coords, seconds, props["distance"] / METERS_PER_MI, props["time"])
+
+
 def get_provider():
-    return HereRouting() if settings.HERE_API_KEY else OsrmRouting()
+    if settings.HERE_API_KEY:
+        return HereRouting()
+    if settings.GEOAPIFY_API_KEY:
+        return GeoapifyRouting()
+    return OsrmRouting()

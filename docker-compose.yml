@@ -14,6 +14,7 @@ services:
       DJANGO_DEBUG: "true"
       DJANGO_ALLOWED_HOSTS: "*"
       HERE_API_KEY: ${HERE_API_KEY:-}
+      GEOAPIFY_API_KEY: ${GEOAPIFY_API_KEY:-}
     volumes:
       - ./backend:/app/backend
       - pip-cache:/root/.cache/pip
@@ -43,6 +44,7 @@ services:
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-local-only-not-secret}
       DJANGO_ALLOWED_HOSTS: "localhost,127.0.0.1"
       HERE_API_KEY: ${HERE_API_KEY:-}
+      GEOAPIFY_API_KEY: ${GEOAPIFY_API_KEY:-}
     ports:
       - "8000:8000"
 

@@ -154,14 +154,14 @@ code and pinned by tests.
 
 | Need | Used | Why this one |
 |---|---|---|
-| Routing | **HERE Routing v8, truck mode** when `HERE_API_KEY` is set; otherwise the public **OSRM** server | HERE plans for a truck's gross weight and returns alternatives. OSRM needs no key, so the app runs with zero setup. |
+| Routing | **HERE Routing v8** (truck, exact gross weight) if `HERE_API_KEY` is set; else **Geoapify** (truck profile chosen by weight class: light ≤ 3.5 t, medium ≤ 7.5 t, truck ≤ 22 t, heavy above) if `GEOAPIFY_API_KEY` is set; else the public **OSRM** server (car) | Truck-aware routing where a key is available. OSRM needs no key, so the app still runs with zero setup. Geoapify returns one route per request; the planner forces the other two through via points. |
 | Weather | **Open-Meteo** | Free, no key, hourly to 16 days, **many locations per request** (the heatmap needs that), rain/showers/snow per hour. |
-| Place search | **HERE Geocoding**, else **Photon** | Photon is built for type-ahead; Nominatim's policy forbids autocomplete. |
+| Place search | **HERE Geocoding**, else **Geoapify Autocomplete**, else **Photon** | All three are built for type-ahead; Nominatim's policy forbids autocomplete. |
 | Map | **MapLibre GL** + CARTO tiles | Open source, no token, GPU-rendered layers, which is what keeps the slider smooth. |
 
-**Note:** the live demo runs **without** a HERE key, so its routes come from OSRM's
-**car** profile. The load weight is still applied in full by the risk rules; adding a
-key in the server's `.env` switches routing to HERE's truck mode with no code change.
+**Note:** the routing provider is shown in the app header (*Routing · Geoapify*).
+Whichever provider plans the route, the load weight is applied in full by the risk
+rules; the routing key only decides whether the roads themselves suit a truck.
 
 ## Performance
 
@@ -213,7 +213,7 @@ Settings come from environment variables; see [`.env.example`](.env.example). On
 ## Tests and CI/CD
 
 ```bash
-cd backend && pytest                 # 79 tests, 93% coverage of the planner package
+cd backend && pytest                 # 90 tests
 cd frontend && npm run build         # tsc type-check + production build
 ```
 
@@ -224,6 +224,7 @@ cd frontend && npm run build         # tsc type-check + production build
 | `test_ranking.py` (12) | each ranking rule alone, rule precedence, No Travel first, explanations |
 | `test_api.py` (12) | full plan/heatmap requests with providers mocked; validation; 503s |
 | `test_services.py` (6) | unit conversion, caching, HERE span parsing, corridor cap, geocoder |
+| `test_geoapify.py` (11) | truck class by weight, leg/step parsing, provider order, a full plan |
 
 **CI** (`.github/workflows/ci.yml`, every push and PR): ruff + pytest on Python 3.12;
 Prettier, `tsc` and a production build; **gitleaks** over the full history; and a
@@ -245,7 +246,7 @@ backend/
   planner/services/    routing.py, weather.py, geocoding.py, http.py
   planner/planning.py  joins services and core into a plan and a corridor forecast
   planner/views.py     DRF endpoints; serializers.py validates input
-  tests/               79 tests
+  tests/               90 tests
 frontend/src/
   pages/               Landing.tsx (/), Planner.tsx (/app)
   components/          MapView, RouteCards, ForecastSlider, TripForm, ...
@@ -255,7 +256,8 @@ deploy/                production compose file, Caddyfile, EC2 setup script
 
 ## Known limits
 
-- Without a HERE key, routing uses OSRM's **car** profile (see above).
+- Without a HERE or Geoapify key, routing uses OSRM's **car** profile (see above).
+- Geoapify's truck profiles are weight **classes**, not exact weights.
 - Open-Meteo's free tier is for non-commercial use, with per-minute limits; a busy
   minute returns a clear "try again" message.
 - The forecast cache is in memory, per process, which suits one small server.
