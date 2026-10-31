@@ -358,7 +358,13 @@ function endpoint(kind: "start" | "end", label?: string): HTMLElement {
   tag.className =
     "pointer-events-none absolute top-1/2 left-6 -translate-y-1/2 whitespace-nowrap rounded-md border border-ink-600 bg-ink-900/90 px-1.5 py-0.5 text-[11px] font-semibold text-slate-100 shadow-lg";
   // textContent, never innerHTML: the label is user-chosen text.
-  const place = label?.split(",")[0].trim();
+  // City and state: many US place names repeat across states (there is a Dallas
+  // in Texas, Iowa, Missouri and Alabama), so the city alone can hide a wrong pick.
+  const place = label
+    ?.split(",")
+    .slice(0, 2)
+    .map((s) => s.trim())
+    .join(", ");
   tag.textContent = place ? `${role} · ${place}` : role;
   el.append(pin, tag);
   return el;
