@@ -246,10 +246,17 @@ export default function MapView({
       markersRef.current.push(new Marker({ element: el }).setLngLat(at).addTo(map));
     });
     const first = plan.routes[0].geometry;
+    const start = first[0];
+    const end = first[first.length - 1];
+    // Labels point inward: the eastern endpoint's label hangs to its left, so it
+    // never runs off the map edge or under the map key.
+    const startIsEast = start[0] > end[0];
     markersRef.current.push(
-      new Marker({ element: endpoint("start", originLabel) }).setLngLat(first[0]).addTo(map),
-      new Marker({ element: endpoint("end", destinationLabel) })
-        .setLngLat(first[first.length - 1])
+      new Marker({ element: endpoint("start", originLabel, startIsEast) })
+        .setLngLat(start)
+        .addTo(map),
+      new Marker({ element: endpoint("end", destinationLabel, !startIsEast) })
+        .setLngLat(end)
         .addTo(map),
     );
   }, [plan, selectedId, ready, originLabel, destinationLabel]);
@@ -344,7 +351,7 @@ function routeLabel(letter: string, recommended: boolean, selected: boolean): HT
 }
 
 // The pin keeps the marker's anchor; the place name hangs to its right.
-function endpoint(kind: "start" | "end", label?: string): HTMLElement {
+function endpoint(kind: "start" | "end", label?: string, labelLeft = false): HTMLElement {
   const role = kind === "start" ? "Origin" : "Destination";
   const el = document.createElement("div");
   el.className = "relative h-4 w-4";
@@ -355,8 +362,7 @@ function endpoint(kind: "start" | "end", label?: string): HTMLElement {
       ? "h-4 w-4 rounded-full border-[3px] border-white bg-ink-950 shadow-lg"
       : "h-4 w-4 rotate-45 rounded-sm border-[3px] border-white bg-turq shadow-lg";
   const tag = document.createElement("div");
-  tag.className =
-    "pointer-events-none absolute top-1/2 left-6 -translate-y-1/2 whitespace-nowrap rounded-md border border-ink-600 bg-ink-900/90 px-1.5 py-0.5 text-[11px] font-semibold text-slate-100 shadow-lg";
+  tag.className = `pointer-events-none absolute top-1/2 ${labelLeft ? "right-6" : "left-6"} -translate-y-1/2 whitespace-nowrap rounded-md border border-ink-600 bg-ink-900/90 px-1.5 py-0.5 text-[11px] font-semibold text-slate-100 shadow-lg`;
   // textContent, never innerHTML: the label is user-chosen text.
   // City and state: many US place names repeat across states (there is a Dallas
   // in Texas, Iowa, Missouri and Alabama), so the city alone can hide a wrong pick.
