@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { api, type Heatmap, type Plan, type PlanRequest } from "../api";
 import ForecastSlider from "../components/ForecastSlider";
 import Logo from "../components/Logo";
@@ -6,6 +6,11 @@ import MapLegend from "../components/MapLegend";
 import MapView from "../components/MapView";
 import RouteCards, { type CheckpointFocus } from "../components/RouteCards";
 import TripForm from "../components/TripForm";
+import { cumulativeMiles, pointsNearRoute, truckAt } from "../geo";
+import { ROUTE_LETTERS } from "../risk";
+
+// Corridor points this close to a route's line count as "on" that route.
+const ON_ROUTE_MI = 10;
 
 export default function Planner() {
   const [plan, setPlan] = useState<Plan | null>(null);
@@ -57,6 +62,33 @@ export default function Planner() {
       setLoading(false);
     }
   };
+
+  const selected = plan?.routes.find((r) => r.id === selectedId) ?? null;
+  const selectedLetter = selected && plan ? ROUTE_LETTERS[plan.routes.indexOf(selected)] : "";
+
+  // Worked out once per route (and per heatmap), so moving the slider only
+  // reads a few array entries.
+  const routeMiles = useMemo(
+    () => (selected ? cumulativeMiles(selected.geometry) : []),
+    [selected],
+  );
+  const onRoute = useMemo(
+    () =>
+      selected && heatmap ? pointsNearRoute(heatmap.points, selected.geometry, ON_ROUTE_MI) : [],
+    [selected, heatmap],
+  );
+
+  // Where the selected route's truck is at the slider hour, from its own ETAs.
+  const truck = useMemo(() => {
+    if (!selected || !heatmap) return null;
+    const when = Date.parse(heatmap.start) + hour * 3_600_000;
+    return truckAt(selected, routeMiles, when);
+  }, [selected, heatmap, hour, routeMiles]);
+
+  const routeWorst =
+    heatmap && onRoute.length
+      ? Math.max(0, ...onRoute.map((i) => heatmap.points[i].risk[hour] ?? 0))
+      : null;
 
   const selectRoute = (id: string) => {
     setSelectedId(id);
@@ -122,6 +154,7 @@ export default function Planner() {
             selectedId={selectedId}
             onSelect={selectRoute}
             focus={focus}
+            truck={truck?.at ?? null}
             heatmap={heatmap}
             hour={hour}
             originLabel={request?.origin.label}
@@ -144,6 +177,9 @@ export default function Planner() {
         {plan && (
           <div className="border-ink-700 bg-ink-900 border-b p-2 md:absolute md:bottom-8 md:left-4 md:w-[440px] md:border-0 md:bg-transparent md:p-0">
             <ForecastSlider
+              routeLetter={selectedLetter}
+              routeWorst={routeWorst}
+              truck={truck}
               heatmap={heatmap}
               hour={hour}
               onChange={setHour}

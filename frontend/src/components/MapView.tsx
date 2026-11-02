@@ -49,6 +49,8 @@ type Props = {
   heatmap: Heatmap | null;
   hour: number;
   focus: CheckpointFocus;
+  /** The selected route's truck at the slider hour, [lon, lat]. */
+  truck: [number, number] | null;
   originLabel?: string;
   destinationLabel?: string;
 };
@@ -60,6 +62,7 @@ export default function MapView({
   heatmap,
   hour,
   focus,
+  truck,
   originLabel,
   destinationLabel,
 }: Props) {
@@ -87,6 +90,7 @@ export default function MapView({
       map.addSource("routes", { type: "geojson", data: EMPTY });
       map.addSource("checkpoints", { type: "geojson", data: EMPTY });
       map.addSource("focus", { type: "geojson", data: EMPTY });
+      map.addSource("truck", { type: "geojson", data: EMPTY });
 
       // The heatmap is drawn as heavily blurred circles rather than a MapLibre
       // `heatmap` layer. A heatmap layer adds overlapping points together, so
@@ -151,6 +155,25 @@ export default function MapView({
           "circle-opacity": ["case", ["get", "selected"], 1, 0.75],
           "circle-stroke-color": "#0b1014",
           "circle-stroke-width": 1.5,
+        },
+      });
+
+      // The truck at the slider hour: a halo and a white dot over the checkpoints.
+      map.addLayer({
+        id: "truck-halo",
+        type: "circle",
+        source: "truck",
+        paint: { "circle-radius": 16, "circle-color": "#40e0d0", "circle-opacity": 0.25 },
+      });
+      map.addLayer({
+        id: "truck",
+        type: "circle",
+        source: "truck",
+        paint: {
+          "circle-radius": 7,
+          "circle-color": "#ffffff",
+          "circle-stroke-color": "#0b1014",
+          "circle-stroke-width": 3,
         },
       });
 
@@ -285,6 +308,17 @@ export default function MapView({
         .addTo(map);
     }
   }, [focus, plan, ready]);
+
+  // One point; updating it as the slider moves is a trivial GPU upload.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready) return;
+    (map.getSource("truck") as GeoJSONSource).setData(
+      truck
+        ? { type: "Feature", properties: {}, geometry: { type: "Point", coordinates: truck } }
+        : EMPTY,
+    );
+  }, [truck, ready]);
 
   // Frame all routes when a new plan arrives.
   useEffect(() => {

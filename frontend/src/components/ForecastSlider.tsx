@@ -1,10 +1,15 @@
 import { useMemo } from "react";
 import type { Heatmap } from "../api";
+import type { TruckState } from "../geo";
 import { LEVELS, formatTime } from "../risk";
 
 const TICKS = [0, 12, 24, 36, 48];
 
 type Props = {
+  routeLetter: string;
+  /** Worst level among corridor points on the selected route, at this hour. */
+  routeWorst: number | null;
+  truck: TruckState | null;
   heatmap: Heatmap | null;
   hour: number;
   onChange: (hour: number) => void;
@@ -16,6 +21,9 @@ type Props = {
 // Hour 0 is the departure hour; the corridor layer shows the forecast at
 // start + hour. The summary line is computed from the same corridor data.
 export default function ForecastSlider({
+  routeLetter,
+  routeWorst,
+  truck,
   heatmap,
   hour,
   onChange,
@@ -89,23 +97,40 @@ export default function ForecastSlider({
               <span key={t}>{t}h</span>
             ))}
           </div>
-          <p className="mt-2 min-h-[1.25rem] text-xs text-slate-300" aria-live="polite">
+          <div
+            className="mt-2 min-h-[2.5rem] space-y-0.5 text-xs text-slate-300"
+            aria-live="polite"
+          >
             {loading ? (
               <span className="animate-pulse text-slate-400">
                 Loading the 48-hour corridor forecast…
               </span>
             ) : summary ? (
               <>
-                Worst in corridor:{" "}
-                <span className="font-bold" style={{ color: LEVELS[summary.worst].color }}>
-                  {LEVELS[summary.worst].label}
-                </span>
-                <span className="text-slate-400">
-                  {" "}
+                <p>
+                  Along Route {routeLetter} at +{hour} h:{" "}
+                  {routeWorst === null ? (
+                    <span className="text-slate-400">no corridor points on this road</span>
+                  ) : (
+                    <span className="font-bold" style={{ color: LEVELS[routeWorst].color }}>
+                      {LEVELS[routeWorst].label}
+                    </span>
+                  )}
+                  {truck && <span className="text-slate-400"> · {truckText(truck)}</span>}
+                </p>
+                <p className="text-slate-400">
+                  Corridor worst:{" "}
+                  <span className="font-semibold" style={{ color: LEVELS[summary.worst].color }}>
+                    {LEVELS[summary.worst].label}
+                  </span>{" "}
                   · {summary.elevated} of {summary.total} points Moderate or worse
-                </span>
+                </p>
               </>
             ) : null}
+          </div>
+          <p className="border-ink-700 mt-2 border-t pt-1.5 text-[11px] text-slate-400">
+            Map: weather at the slider hour. Route cards: weather when the truck reaches each
+            checkpoint.
           </p>
         </>
       )}
@@ -120,4 +145,11 @@ export default function ForecastSlider({
       </div>
     </div>
   );
+}
+
+function truckText(truck: TruckState): string {
+  if (truck.kind !== "driving") {
+    return truck.kind === "waiting" ? "truck not departed yet" : "truck has arrived";
+  }
+  return `truck at mile ${Math.round(truck.mile)} of ${Math.round(truck.totalMiles)}`;
 }

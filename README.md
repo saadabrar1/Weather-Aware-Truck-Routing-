@@ -38,7 +38,9 @@ with **truck routing by Geoapify** (the truck class follows the load weight).
 4. The map shows all routes, checkpoints, risk levels and ETAs; the recommended route
    is turquoise and its card names the rule that decided it.
 5. A **corridor heatmap** with a **0–48 hour slider** shows how the weather along the
-   trip changes after departure.
+   trip changes after departure. A truck marker shows where the selected route's truck
+   is at that hour, and the panel gives the worst level **along the selected route**
+   as well as across the whole corridor.
 
 ## How each requirement is met
 
@@ -126,6 +128,15 @@ than the next route (10 vs 40)"*.
 **Heatmap.** A grid of points every 20 miles along each route and 25 miles to either
 side, snapped to 0.25° and capped at 250 points. One request returns every point's
 risk for all **49 hours** (0–48).
+
+The heatmap and the route cards answer different questions. The **cards** grade each
+checkpoint at the hour the **truck arrives** there; the **heatmap** shows the whole
+corridor at **one** hour. A High cell can glow near a route whose card says 0 High
+miles because it lies off the road, or because the truck passes that spot hours
+before or after the cell. To make that readable, the panel shows the worst level among
+corridor points within 10 miles of the **selected route** at the slider hour, and the
+map shows where that route's **truck** is at the same hour, placed along the road from
+the route's own checkpoint ETAs.
 
 ## Assumptions and decisions
 
@@ -271,3 +282,6 @@ deploy/                production compose file, Caddyfile, EC2 setup script
 - The forecast cache is in memory, per process, which suits one small server.
 - A checkpoint reads the **nearest** forecast hour to its ETA rather than
   interpolating between hours.
+- Weather is sampled at checkpoints, as the brief specifies, so a storm cell narrower
+  than the chosen interval can fall between two of them. The 10-mile interval gives
+  the finest sampling; the corridor heatmap still shows such cells.

@@ -31,6 +31,13 @@ export default function MapLegend() {
         >
           Checkpoint, coloured by risk
         </Item>
+        <Item
+          swatch={
+            <span className="ring-turq/40 inline-block h-3 w-3 rounded-full border-[3px] border-[#0b1014] bg-white ring-4" />
+          }
+        >
+          Truck at the slider hour
+        </Item>
       </ul>
     </div>
   );
