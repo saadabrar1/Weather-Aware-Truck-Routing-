@@ -7,8 +7,10 @@ const TICKS = [0, 12, 24, 36, 48];
 
 type Props = {
   routeLetter: string;
-  /** Worst level among corridor points on the selected route, at this hour. */
-  routeWorst: number | null;
+  /** Level at the corridor point nearest the truck, at this hour. */
+  atTruck: number | null;
+  /** Worst level on the selected route ahead of the truck, at this hour. */
+  aheadWorst: number | null;
   truck: TruckState | null;
   heatmap: Heatmap | null;
   hour: number;
@@ -23,7 +25,8 @@ type Props = {
 // readout is computed from the same corridor data.
 export default function ForecastSlider({
   routeLetter,
-  routeWorst,
+  atTruck,
+  aheadWorst,
   truck,
   heatmap,
   hour,
@@ -117,26 +120,29 @@ export default function ForecastSlider({
             <p className="text-ink-3 animate-pulse">Loading the 48-hour corridor forecast…</p>
           ) : corridor ? (
             <dl className="space-y-1">
-              <div className="flex justify-between gap-3">
-                <dt className="text-ink-2 whitespace-nowrap">Route {routeLetter} at this hour</dt>
-                <dd className="font-bold">
-                  {routeWorst === null ? (
-                    <span className="text-ink-3 font-normal">no points on this road</span>
-                  ) : (
-                    <span style={{ color: LEVELS[routeWorst].ink }}>
-                      {LEVELS[routeWorst].label}
-                    </span>
-                  )}
-                </dd>
-              </div>
               {truck && (
                 <div className="flex justify-between gap-3">
-                  <dt className="text-ink-2">Truck</dt>
+                  <dt className="text-ink-2">Truck on Route {routeLetter}</dt>
                   <dd className="font-semibold whitespace-nowrap tabular-nums">
                     {truckText(truck)}
                   </dd>
                 </div>
               )}
+              <div className="flex justify-between gap-3">
+                <dt className="text-ink-2 whitespace-nowrap">At the truck</dt>
+                <dd className="font-bold">
+                  <Level level={atTruck} none="no forecast point nearby" />
+                </dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-ink-2 whitespace-nowrap">Ahead on the route</dt>
+                <dd className="font-bold">
+                  <Level
+                    level={aheadWorst}
+                    none={truck?.kind === "arrived" ? "nothing left to drive" : "no data"}
+                  />
+                </dd>
+              </div>
               <div className="flex justify-between gap-3">
                 <dt className="text-ink-2 whitespace-nowrap">Whole corridor</dt>
                 <dd className="font-bold" style={{ color: LEVELS[corridor.worst].ink }}>
@@ -153,8 +159,8 @@ export default function ForecastSlider({
 
       <div className="border-rule-2 mt-2.5 flex flex-col gap-2 border-t pt-2 text-[12px] md:flex-row md:items-center md:justify-between">
         <p className="text-ink-3">
-          The map shows weather at the chosen hour. Route results use the hour the truck reaches
-          each checkpoint.
+          The map shows weather at the chosen hour. Weather behind the truck is left out of the
+          route lines; route results use the hour the truck reaches each checkpoint.
         </p>
         <ul
           className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1"
@@ -177,4 +183,9 @@ function truckText(truck: TruckState): string {
     return truck.kind === "waiting" ? "not departed yet" : "arrived";
   }
   return `mile ${Math.round(truck.mile)} of ${Math.round(truck.totalMiles)}`;
+}
+
+function Level({ level, none }: { level: number | null; none: string }) {
+  if (level === null) return <span className="text-ink-3 font-normal">{none}</span>;
+  return <span style={{ color: LEVELS[level].ink }}>{LEVELS[level].label}</span>;
 }

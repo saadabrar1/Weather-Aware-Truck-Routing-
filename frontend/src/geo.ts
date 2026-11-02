@@ -38,9 +38,11 @@ export function pointAtMile(line: LonLat[], miles: number[], mile: number): LonL
   ];
 }
 
+// `alongMi` is the truck's distance along the drawn route geometry, the same
+// measure `pointsNearRoute` gives each forecast point, so the two compare.
 export type TruckState =
-  | { kind: "waiting" | "arrived"; at: LonLat }
-  | { kind: "driving"; mile: number; totalMiles: number; at: LonLat };
+  | { kind: "waiting" | "arrived"; at: LonLat; alongMi: number }
+  | { kind: "driving"; mile: number; totalMiles: number; at: LonLat; alongMi: number };
 
 /**
  * Where the truck is at `when`, from the route's own checkpoint ETAs: the mile
@@ -50,9 +52,13 @@ export type TruckState =
 export function truckAt(route: RouteOption, miles: number[], when: number): TruckState {
   const cps = route.checkpoints;
   const times = cps.map((c) => Date.parse(c.eta));
-  if (when < times[0]) return { kind: "waiting", at: route.geometry[0] };
+  if (when < times[0]) return { kind: "waiting", at: route.geometry[0], alongMi: 0 };
   if (when >= times[times.length - 1]) {
-    return { kind: "arrived", at: route.geometry[route.geometry.length - 1] };
+    return {
+      kind: "arrived",
+      at: route.geometry[route.geometry.length - 1],
+      alongMi: miles[miles.length - 1],
+    };
   }
   let i = 0;
   while (times[i + 1] <= when) i++;
@@ -66,21 +72,36 @@ export function truckAt(route: RouteOption, miles: number[], when: number): Truc
     mile,
     totalMiles: cps[cps.length - 1].mile,
     at: pointAtMile(route.geometry, miles, mile * scale),
+    alongMi: mile * scale,
   };
 }
 
-/** Indices of `points` within `radiusMi` of the route line (checked against a thinned line). */
+export type OnRoutePoint = { index: number; alongMi: number };
+
+/**
+ * Forecast points within `radiusMi` of the route line, each with how far along
+ * the route its nearest stretch lies (checked against a thinned line).
+ */
 export function pointsNearRoute(
   points: { lon: number; lat: number }[],
   line: LonLat[],
+  miles: number[],
   radiusMi: number,
-): number[] {
+): OnRoutePoint[] {
   const step = Math.max(1, Math.floor(line.length / 400));
-  const thin = line.filter((_, i) => i % step === 0);
-  const out: number[] = [];
-  points.forEach((p, i) => {
+  const out: OnRoutePoint[] = [];
+  points.forEach((p, index) => {
     const here: LonLat = [p.lon, p.lat];
-    if (thin.some((q) => haversineMi(here, q) <= radiusMi)) out.push(i);
+    let best = Infinity;
+    let bestMile = 0;
+    for (let i = 0; i < line.length; i += step) {
+      const d = haversineMi(here, line[i]);
+      if (d < best) {
+        best = d;
+        bestMile = miles[i];
+      }
+    }
+    if (best <= radiusMi) out.push({ index, alongMi: bestMile });
   });
   return out;
 }

@@ -11,6 +11,8 @@ import { ROUTE_LETTERS } from "../risk";
 
 // Corridor points this close to a route's line count as "on" that route.
 const ON_ROUTE_MI = 10;
+// A forecast point within this many route miles of the truck counts as "at" it.
+const AT_TRUCK_MI = 15;
 
 export default function Planner() {
   const [plan, setPlan] = useState<Plan | null>(null);
@@ -74,7 +76,9 @@ export default function Planner() {
   );
   const onRoute = useMemo(
     () =>
-      selected && heatmap ? pointsNearRoute(heatmap.points, selected.geometry, ON_ROUTE_MI) : [],
+      selected && heatmap
+        ? pointsNearRoute(heatmap.points, selected.geometry, routeMiles, ON_ROUTE_MI)
+        : [],
     [selected, heatmap],
   );
 
@@ -85,10 +89,20 @@ export default function Planner() {
     return truckAt(selected, routeMiles, when);
   }, [selected, heatmap, hour, routeMiles]);
 
-  const routeWorst =
-    heatmap && onRoute.length
-      ? Math.max(0, ...onRoute.map((i) => heatmap.points[i].risk[hour] ?? 0))
-      : null;
+  // What matters to the driver at the slider hour: the weather where the truck
+  // is, and the worst on the road it has not driven yet. Weather behind the
+  // truck is left out; it passed there earlier, at a different hour.
+  const levelAt = (i: number) => heatmap?.points[i].risk[hour] ?? 0;
+  const atTruck = useMemo(() => {
+    if (!truck || !heatmap || !onRoute.length) return null;
+    const nearest = onRoute.reduce((best, p) =>
+      Math.abs(p.alongMi - truck.alongMi) < Math.abs(best.alongMi - truck.alongMi) ? p : best,
+    );
+    return Math.abs(nearest.alongMi - truck.alongMi) <= AT_TRUCK_MI ? nearest.index : null;
+  }, [truck, heatmap, onRoute]);
+  const atTruckLevel = atTruck === null ? null : levelAt(atTruck);
+  const ahead = truck ? onRoute.filter((p) => p.alongMi > truck.alongMi + AT_TRUCK_MI) : [];
+  const aheadWorst = ahead.length ? Math.max(...ahead.map((p) => levelAt(p.index))) : null;
 
   const selectRoute = (id: string) => {
     setSelectedId(id);
@@ -188,7 +202,8 @@ export default function Planner() {
         {plan && (
           <ForecastSlider
             routeLetter={selectedLetter}
-            routeWorst={routeWorst}
+            atTruck={atTruckLevel}
+            aheadWorst={aheadWorst}
             truck={truck}
             heatmap={heatmap}
             hour={hour}
