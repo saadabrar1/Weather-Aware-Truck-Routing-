@@ -8,6 +8,7 @@ import {
   peakLevel,
   timeZoneLabel,
 } from "../risk";
+import Shield from "./Shield";
 
 export type CheckpointFocus = { routeId: string; checkpoint: Checkpoint; fly: boolean } | null;
 
@@ -18,6 +19,8 @@ type Props = {
   onFocusCheckpoint: (focus: CheckpointFocus) => void;
 };
 
+// The routes as a dispatch board: one ruled ledger, best first, each row
+// carrying a strip map of where along the trip the risk sits.
 export default function RouteCards({ plan, selectedId, onSelect, onFocusCheckpoint }: Props) {
   const byRank = [...plan.routes].sort((a, b) => a.rank - b.rank);
   const letter = (r: RouteOption) => ROUTE_LETTERS[plan.routes.indexOf(r)];
@@ -25,31 +28,42 @@ export default function RouteCards({ plan, selectedId, onSelect, onFocusCheckpoi
   const selected = plan.routes.find((r) => r.id === selectedId);
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-6">
       {plan.warnings.map((w) => (
         <p
           key={w}
           role="status"
-          className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200"
+          className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900"
         >
           {w}
         </p>
       ))}
 
-      <ul className="space-y-2" aria-label="Route options, best first">
-        {byRank.map((r) => (
-          <li key={r.id}>
-            <RouteCard
-              route={r}
-              letter={letter(r)}
-              best={best}
-              explanation={plan.explanation}
-              selected={r.id === selectedId}
-              onSelect={() => onSelect(r.id)}
-            />
-          </li>
-        ))}
-      </ul>
+      <section aria-labelledby="routes-heading">
+        <div className="flex items-baseline justify-between">
+          <h2 id="routes-heading" className="text-[17px] font-bold">
+            Routes
+          </h2>
+          <span className="text-ink-3 text-[13px]">Best first</span>
+        </div>
+        <p className="text-ink-3 mt-0.5 text-[13px]">
+          Ranked by Severe miles, then High miles, average risk and time.
+        </p>
+        <ul className="border-rule mt-3 border-t" aria-label="Route options, best first">
+          {byRank.map((r) => (
+            <li key={r.id} className="border-rule border-b">
+              <RouteRow
+                route={r}
+                letter={letter(r)}
+                best={best}
+                explanation={plan.explanation}
+                selected={r.id === selectedId}
+                onSelect={() => onSelect(r.id)}
+              />
+            </li>
+          ))}
+        </ul>
+      </section>
 
       {selected && (
         <CheckpointTable
@@ -64,7 +78,7 @@ export default function RouteCards({ plan, selectedId, onSelect, onFocusCheckpoi
   );
 }
 
-type CardProps = {
+type RowProps = {
   route: RouteOption;
   letter: string;
   best: RouteOption;
@@ -73,7 +87,7 @@ type CardProps = {
   onSelect: () => void;
 };
 
-function RouteCard({ route, letter, best, explanation, selected, onSelect }: CardProps) {
+function RouteRow({ route, letter, best, explanation, selected, onSelect }: RowProps) {
   const recommended = route.id === best.id;
   const peak = LEVELS[peakLevel(route)];
   const m = route.miles_by_level;
@@ -82,152 +96,124 @@ function RouteCard({ route, letter, best, explanation, selected, onSelect }: Car
       type="button"
       onClick={onSelect}
       aria-pressed={selected}
-      className={`w-full overflow-hidden rounded-xl border text-left transition ${
-        recommended ? "bg-ink-800 border-turq/50" : "bg-ink-800/70 border-ink-600 hover:bg-ink-700"
-      } ${selected ? "ring-turq/60 ring-2" : ""}`}
+      className={`relative block w-full px-3 py-3.5 text-left transition-colors ${
+        selected ? "bg-[#edf2fa]" : "hover:bg-rule-2/60"
+      }`}
     >
-      {recommended && (
-        <div className="from-deep border-turq/30 border-b bg-gradient-to-r to-transparent px-3 py-2">
-          <div className="text-turq flex items-center gap-1.5 text-[11px] font-bold tracking-wider uppercase">
-            <svg viewBox="0 0 20 20" className="h-3.5 w-3.5 fill-current" aria-hidden>
-              <path d="M10 1.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.5 7.7l5.9-.9z" />
-            </svg>
-            Recommended
+      {selected && <span aria-hidden className="bg-shield absolute inset-y-0 left-0 w-[3px]" />}
+      <div className="flex items-start gap-3">
+        <Shield letter={letter} recommended={recommended} size={30} className="mt-0.5 shrink-0" />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="text-[15px] font-bold">
+              Route {letter}
+              {recommended && (
+                <span className="text-shield ml-2 text-[13px] font-semibold">Recommended</span>
+              )}
+            </span>
+            <span className="shrink-0 text-[17px] leading-none font-extrabold tabular-nums">
+              {formatDuration(route.duration_s)}
+            </span>
           </div>
-          <p className="mt-0.5 text-xs text-slate-300">{explanation}</p>
-        </div>
-      )}
-
-      <div className="p-3">
-        <div className="flex items-center justify-between gap-2">
-          <span className="flex items-center gap-2 font-semibold">
-            <RouteBadge letter={letter} recommended={recommended} />
-            Route {letter}
-            {route.name && (
-              <span className="truncate font-normal text-slate-400">· {route.name}</span>
+          <div className="text-ink-3 mt-0.5 flex items-baseline justify-between gap-3 text-[13px]">
+            {recommended ? (
+              <span className="text-ink-2">{explanation}</span>
+            ) : (
+              <Delta route={route} best={best} />
             )}
-          </span>
-          {!recommended && (
-            <span className="text-[11px] font-semibold text-slate-400">Rank #{route.rank}</span>
-          )}
-        </div>
-
-        {!recommended && <Deltas route={route} best={best} />}
-
-        <div className="mt-2 flex items-end justify-between gap-3">
-          <div>
-            <div className="text-[11px] font-semibold tracking-wider text-slate-400 uppercase">
-              Peak risk
-            </div>
-            <div className="text-xl leading-tight font-extrabold" style={{ color: peak.color }}>
-              {peak.label}
-            </div>
-          </div>
-          <div className="text-right text-xs text-slate-400">
-            avg risk{" "}
-            <span className="font-semibold text-slate-200">{route.avg_risk.toFixed(2)}</span> / 4
+            <span className="shrink-0 tabular-nums">{Math.round(route.distance_mi)} mi</span>
           </div>
         </div>
-
-        <dl className="mt-2 grid grid-cols-4 gap-1.5 text-center">
-          <Stat label="Distance" value={`${Math.round(route.distance_mi)} mi`} />
-          <Stat label="Time" value={formatDuration(route.duration_s)} />
-          <Stat label="Severe" value={`${Math.round(m.severe)} mi`} alert={m.severe > 0} />
-          <Stat label="High" value={`${Math.round(m.high)} mi`} alert={m.high > 0} />
-        </dl>
-
-        <RiskBar route={route} />
       </div>
+
+      <StripMap route={route} />
+
+      <dl className="mt-2 grid grid-cols-3 gap-2 text-[13px]">
+        <div>
+          <dt className="text-ink-3">Peak risk</dt>
+          <dd className="font-bold" style={{ color: peak.ink }}>
+            {peak.label}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-ink-3">Severe</dt>
+          <dd
+            className={`font-bold tabular-nums ${m.severe + m.no_travel > 0 ? "text-[#b01c1c]" : ""}`}
+          >
+            {Math.round(m.severe)} mi
+            {m.no_travel > 0 && (
+              <span className="ml-1 font-semibold text-[#6d28b8]">
+                +{Math.round(m.no_travel)} No Travel
+              </span>
+            )}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-ink-3">High</dt>
+          <dd className={`font-bold tabular-nums ${m.high > 0 ? "text-[#b24a00]" : ""}`}>
+            {Math.round(m.high)} mi
+          </dd>
+        </div>
+      </dl>
+      <p className="text-ink-3 mt-1.5 text-[12px]">
+        Average risk {route.avg_risk.toFixed(2)} on a 0–4 scale
+      </p>
     </button>
   );
 }
 
-export function RouteBadge({ letter, recommended }: { letter: string; recommended: boolean }) {
+// What choosing this route instead of the recommended one costs or saves.
+function Delta({ route, best }: { route: RouteOption; best: RouteOption }) {
+  const dt = route.duration_s - best.duration_s;
+  const dd = Math.round(route.distance_mi - best.distance_mi);
+  const sign = (n: number) => (n >= 0 ? "+" : "−");
+  const extra: string[] = [];
+  for (const [label, key] of [
+    ["No Travel", "no_travel"],
+    ["Severe", "severe"],
+    ["High", "high"],
+  ] as const) {
+    const d = Math.round(route.miles_by_level[key] - best.miles_by_level[key]);
+    if (d !== 0) extra.push(`${sign(d)}${Math.abs(d)} ${label} mi`);
+  }
   return (
-    <span
-      className={`grid h-6 w-6 shrink-0 place-items-center rounded-md text-xs font-extrabold ${
-        recommended ? "bg-turq text-ink-950" : "bg-ink-600 text-slate-200"
-      }`}
-    >
-      {letter}
+    <span aria-label="Compared with the recommended route">
+      {sign(dt)}
+      {formatDuration(Math.abs(dt))}, {sign(dd)}
+      {Math.abs(dd)} mi
+      {extra.length > 0 && <span className="text-ink-2">, {extra.join(", ")}</span>} vs the
+      recommended route
     </span>
   );
 }
 
-// What choosing this route instead of the recommended one costs or saves.
-function Deltas({ route, best }: { route: RouteOption; best: RouteOption }) {
-  const dt = route.duration_s - best.duration_s;
-  const dd = route.distance_mi - best.distance_mi;
-  const dSevere = route.miles_by_level.severe - best.miles_by_level.severe;
-  const dHigh = route.miles_by_level.high - best.miles_by_level.high;
-  const dNoTravel = route.miles_by_level.no_travel - best.miles_by_level.no_travel;
-  const chips: { text: string; worse: boolean }[] = [
-    { text: `${dt >= 0 ? "+" : "−"}${formatDuration(Math.abs(dt))}`, worse: dt > 0 },
-    { text: `${dd >= 0 ? "+" : "−"}${Math.abs(Math.round(dd))} mi`, worse: dd > 0 },
-  ];
-  for (const [label, diff] of [
-    ["No Travel", dNoTravel],
-    ["Severe", dSevere],
-    ["High", dHigh],
-  ] as const) {
-    if (Math.round(diff) !== 0) {
-      chips.push({
-        text: `${diff > 0 ? "+" : "−"}${Math.abs(Math.round(diff))} ${label} mi`,
-        worse: diff > 0,
-      });
-    }
-  }
+// A strip map: the trip drawn as one straight bar from origin to destination,
+// each stretch coloured by the risk its checkpoint was graded at, so you see
+// where the risk sits, not just how much of it there is.
+function StripMap({ route }: { route: RouteOption }) {
+  const cps = route.checkpoints;
+  const total = cps[cps.length - 1]?.mile || 1;
+  const stretches = cps.map((c, i) => {
+    const start = i === 0 ? 0 : (cps[i - 1].mile + c.mile) / 2;
+    const end = i === cps.length - 1 ? total : (c.mile + cps[i + 1].mile) / 2;
+    return { level: c.level, start, end };
+  });
   return (
-    <div className="mt-1.5 flex flex-wrap gap-1" aria-label="Compared with the recommended route">
-      {chips.map((c) => (
-        <span
-          key={c.text}
-          className={`rounded px-1.5 py-0.5 text-[11px] font-semibold tabular-nums ${
-            c.worse ? "bg-orange-500/10 text-orange-300" : "bg-green-500/10 text-green-300"
-          }`}
-        >
-          {c.text}
-        </span>
-      ))}
-      <span className="self-center text-[11px] text-slate-400">vs recommended</span>
-    </div>
-  );
-}
-
-function Stat({ label, value, alert }: { label: string; value: string; alert?: boolean }) {
-  return (
-    <div className="bg-ink-900/70 rounded-md px-1 py-1.5">
-      <dt className="text-[11px] font-semibold tracking-wide text-slate-400 uppercase">{label}</dt>
-      <dd className={`text-xs font-semibold ${alert ? "text-orange-300" : "text-slate-100"}`}>
-        {value}
-      </dd>
-    </div>
-  );
-}
-
-function RiskBar({ route }: { route: RouteOption }) {
-  const total = LEVELS.reduce((s, l) => s + route.miles_by_level[l.key], 0) || 1;
-  return (
-    <div className="mt-2.5">
-      <div className="bg-ink-900 flex h-1.5 gap-px overflow-hidden rounded-full">
-        {LEVELS.map((l) => {
-          const mi = route.miles_by_level[l.key];
-          return mi > 0 ? (
-            <div
-              key={l.key}
-              style={{ width: `${(mi / total) * 100}%`, background: l.color }}
-              title={`${l.label}: ${mi} mi`}
-            />
-          ) : null;
-        })}
-      </div>
-      <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-slate-400">
-        {LEVELS.filter((l) => route.miles_by_level[l.key] > 0).map((l) => (
-          <span key={l.key} className="inline-flex items-center gap-1">
-            <span className="h-1.5 w-1.5 rounded-full" style={{ background: l.color }} />
-            {l.label} {Math.round(route.miles_by_level[l.key])} mi
-          </span>
+    <div className="mt-3" aria-hidden>
+      <div className="flex h-2 overflow-hidden rounded-[2px]">
+        {stretches.map((s, i) => (
+          <span
+            key={i}
+            style={{
+              width: `${((s.end - s.start) / total) * 100}%`,
+              background: LEVELS[s.level].color,
+            }}
+          />
         ))}
+      </div>
+      <div className="text-ink-3 mt-1 flex justify-between text-[11px] tabular-nums">
+        <span>Start</span>
+        <span>{Math.round(total)} mi</span>
       </div>
     </div>
   );
@@ -249,35 +235,38 @@ function CheckpointTable({ route, letter, onFocus }: TableProps) {
   const elevated = route.checkpoints.filter((c) => c.level > 0).length;
 
   return (
-    <section>
-      <h3 className="mb-1.5 flex items-baseline justify-between text-[11px] font-semibold tracking-wider text-slate-400 uppercase">
-        <span>
-          Route {letter} · {route.checkpoints.length} weather checkpoints
-        </span>
-        <span className={elevated ? "text-orange-300" : ""}>
+    <section aria-labelledby="checkpoints-heading">
+      <div className="flex items-baseline justify-between">
+        <h2 id="checkpoints-heading" className="text-[17px] font-bold">
+          Route {letter} checkpoints
+        </h2>
+        <span className={`text-[13px] ${elevated ? "font-semibold text-[#b24a00]" : "text-ink-3"}`}>
           {elevated ? `${elevated} above Low` : "All Low"}
         </span>
-      </h3>
+      </div>
+      <p className="text-ink-3 mt-0.5 text-[13px]">
+        Weather at the time the truck reaches each point. Select a row to find it on the map.
+      </p>
       <div
         ref={scroller}
-        className="border-ink-600 bg-ink-800 max-h-80 overflow-auto rounded-xl border"
+        className="border-rule mt-3 max-h-80 overflow-auto rounded-md border bg-white"
         onMouseLeave={() => onFocus(null, false)}
       >
-        <table className="w-full text-xs">
-          <thead className="bg-ink-700 sticky top-0 text-left text-[11px] tracking-wide text-slate-300 uppercase">
+        <table className="w-full text-[13px]">
+          <thead className="text-ink-2 sticky top-0 bg-[#f7f9fb] text-left shadow-[inset_0_-1px_0_var(--color-rule)]">
             <tr>
-              <th className="px-2 py-1.5 font-semibold">Mile</th>
-              <th className="px-2 py-1.5 font-semibold">
-                ETA <Unit>{timeZoneLabel(route.checkpoints[0].eta)}</Unit>
+              <th className="px-2.5 py-2 font-semibold">Mile</th>
+              <th className="px-2.5 py-2 font-semibold">
+                Arrives <Unit>{timeZoneLabel(route.checkpoints[0].eta)}</Unit>
               </th>
-              <th className="px-2 py-1.5 font-semibold">Risk</th>
-              <th className="px-2 py-1.5 text-right font-semibold">
+              <th className="px-2.5 py-2 font-semibold">Risk</th>
+              <th className="px-2.5 py-2 text-right font-semibold">
                 Wind <Unit>mph</Unit>
               </th>
-              <th className="px-2 py-1.5 text-right font-semibold">
+              <th className="px-2.5 py-2 text-right font-semibold">
                 Rain <Unit>in/h</Unit>
               </th>
-              <th className="px-2 py-1.5 text-right font-semibold">
+              <th className="px-2.5 py-2 text-right font-semibold">
                 Snow <Unit>in/h</Unit>
               </th>
             </tr>
@@ -287,7 +276,7 @@ function CheckpointTable({ route, letter, onFocus }: TableProps) {
               <tr
                 key={c.mile}
                 tabIndex={0}
-                className="border-ink-700 hover:bg-ink-700 focus-visible:bg-ink-700 even:bg-ink-900/40 cursor-pointer border-t text-slate-200"
+                className="border-rule-2 cursor-pointer border-t even:bg-[#fafbfc] hover:bg-[#edf2fa] focus-visible:bg-[#edf2fa]"
                 // A risk-coloured edge makes anything above Low easy to spot.
                 style={
                   c.level > 0 ? { boxShadow: `inset 3px 0 0 ${LEVELS[c.level].color}` } : undefined
@@ -303,24 +292,24 @@ function CheckpointTable({ route, letter, onFocus }: TableProps) {
                   }
                 }}
               >
-                <td className="px-2 py-1.5 tabular-nums">{Math.round(c.mile)}</td>
-                <td className="px-2 py-1.5 whitespace-nowrap">{formatClock(c.eta)}</td>
-                <td className="px-2 py-1.5 whitespace-nowrap">
-                  <span className="inline-flex items-center gap-1">
+                <td className="px-2.5 py-1.5 font-semibold tabular-nums">{Math.round(c.mile)}</td>
+                <td className="px-2.5 py-1.5 whitespace-nowrap">{formatClock(c.eta)}</td>
+                <td className="px-2.5 py-1.5 whitespace-nowrap">
+                  <span className="inline-flex items-center gap-1.5">
                     <span
                       className="h-2 w-2 rounded-full"
                       style={{ background: LEVELS[c.level].color }}
                     />
-                    {LEVELS[c.level].label}
+                    <span style={{ color: LEVELS[c.level].ink }}>{LEVELS[c.level].label}</span>
                   </span>
                 </td>
-                <td className="px-2 py-1.5 text-right text-slate-300 tabular-nums">
+                <td className="text-ink-2 px-2.5 py-1.5 text-right tabular-nums">
                   {Math.round(c.wind_mph)}
                 </td>
-                <td className="px-2 py-1.5 text-right text-slate-300 tabular-nums">
+                <td className="text-ink-2 px-2.5 py-1.5 text-right tabular-nums">
                   {c.rain_in_hr.toFixed(2)}
                 </td>
-                <td className="px-2 py-1.5 text-right text-slate-300 tabular-nums">
+                <td className="text-ink-2 px-2.5 py-1.5 text-right tabular-nums">
                   {c.snow_in_hr.toFixed(2)}
                 </td>
               </tr>
@@ -334,9 +323,5 @@ function CheckpointTable({ route, letter, onFocus }: TableProps) {
 
 // Units sit under the column name so the cells hold only numbers.
 function Unit({ children }: { children: string }) {
-  return (
-    <span className="block text-[11px] font-normal tracking-normal text-slate-400 normal-case">
-      {children}
-    </span>
-  );
+  return <span className="text-ink-3 block text-[11px] font-normal">{children}</span>;
 }
