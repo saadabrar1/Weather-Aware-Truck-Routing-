@@ -81,16 +81,16 @@ export default function FeatureCarousel() {
         if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setFocused(false);
       }}
     >
-      <div className="border-ink-600 bg-ink-900 shadow-turq/10 overflow-hidden rounded-2xl border shadow-2xl">
-        <div className="border-ink-700 flex items-center gap-1.5 border-b px-4 py-2.5">
+      <div className="border-rule overflow-hidden rounded-md border bg-white shadow-sm">
+        <div className="border-rule flex items-center gap-2 border-b bg-[#f7f9fb] px-3 py-2">
           {[0, 1, 2].map((i) => (
-            <span key={i} className="bg-ink-600 h-2.5 w-2.5 rounded-full" />
+            <span key={i} className="bg-rule h-2.5 w-2.5 rounded-full" />
           ))}
-          <span className="ml-3 text-[11px] font-semibold tracking-wider text-slate-400 uppercase">
+          <span className="text-ink-2 ml-2 text-[13px] font-semibold">
             {FEATURES[active].title}
           </span>
         </div>
-        <div className="relative aspect-[820/360] bg-[#0b1014]">
+        <div className="relative aspect-[820/360] bg-white">
           {FEATURES.map(({ title, Scene }, i) => (
             <div
               key={title}
@@ -112,11 +112,7 @@ export default function FeatureCarousel() {
         </div>
       </div>
 
-      <div
-        role="tablist"
-        aria-label="Features"
-        className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
-      >
+      <div role="tablist" aria-label="Features" className="mt-3 grid gap-2 sm:grid-cols-2">
         {FEATURES.map((f, i) => (
           <button
             key={f.title}
@@ -125,19 +121,17 @@ export default function FeatureCarousel() {
             aria-selected={i === active}
             aria-controls={`feature-slide-${i}`}
             onClick={() => go(i)}
-            className={`relative overflow-hidden rounded-xl border p-4 text-left transition duration-200 hover:-translate-y-0.5 motion-reduce:hover:translate-y-0 ${
-              i === active
-                ? "border-turq/50 bg-ink-800"
-                : "border-ink-700 bg-ink-900 hover:bg-ink-800"
+            className={`relative overflow-hidden rounded-md border p-3.5 text-left transition-colors ${
+              i === active ? "border-shield bg-white" : "border-rule bg-white/60 hover:bg-white"
             }`}
           >
-            <h3 className={`font-bold ${i === active ? "text-white" : "text-slate-200"}`}>
+            <h3 className={`text-[15px] font-bold ${i === active ? "text-ink" : "text-ink-2"}`}>
               {f.title}
             </h3>
-            <p className="mt-1 text-sm text-slate-400">{f.body}</p>
-            <span className="bg-ink-700 absolute inset-x-0 bottom-0 h-0.5">
+            <p className="text-ink-3 mt-1 text-[13px] leading-snug">{f.body}</p>
+            <span className="bg-rule-2 absolute inset-x-0 bottom-0 h-[3px]">
               <span
-                className="bg-turq block h-full transition-[width] duration-100 ease-linear"
+                className="bg-shield block h-full transition-[width] duration-100 ease-linear"
                 style={{
                   width: i === active ? `${reduced ? 100 : (elapsed / SLIDE_MS) * 100}%` : "0%",
                 }}
@@ -152,13 +146,14 @@ export default function FeatureCarousel() {
 
 type SceneProps = { animate: boolean; cycle: number };
 
+// The planner's own palette, so the preview matches the product.
 const C = {
-  bg: "#0b1014",
-  card: "#16222a",
-  line: "#6b7f8a",
-  turq: "#40e0d0",
-  text: "#e2e8f0",
-  dim: "#94a3b8",
+  bg: "#ffffff",
+  card: "#f3f5f7",
+  line: "#7a8796",
+  accent: "#1f4e9c",
+  text: "#13253a",
+  dim: "#5b6b7d",
 };
 
 function Svg({ label, children }: { label: string; children: React.ReactNode }) {
@@ -215,7 +210,7 @@ function Checkpoint({ x, y, level, r = 6 }: Dot & { r?: number }) {
 function Endpoints({ from, to }: { from: [number, number]; to: [number, number] }) {
   return (
     <>
-      <circle cx={from[0]} cy={from[1]} r="8" fill={C.bg} stroke="#fff" strokeWidth="3" />
+      <circle cx={from[0]} cy={from[1]} r="8" fill={C.bg} stroke={C.text} strokeWidth="3" />
       <rect
         x={to[0] - 8}
         y={to[1] - 8}
@@ -223,8 +218,8 @@ function Endpoints({ from, to }: { from: [number, number]; to: [number, number] 
         height="16"
         rx="3"
         transform={`rotate(45 ${to[0]} ${to[1]})`}
-        fill={C.turq}
-        stroke="#fff"
+        fill={C.accent}
+        stroke={C.bg}
         strokeWidth="3"
       />
     </>
@@ -234,8 +229,8 @@ function Endpoints({ from, to }: { from: [number, number]; to: [number, number] 
 function Tag({ x, y, title, value }: { x: number; y: number; title: string; value: string }) {
   return (
     <g transform={`translate(${x} ${y})`}>
-      <rect width="236" height="64" rx="10" fill={C.card} stroke={C.turq} strokeOpacity="0.5" />
-      <text x="14" y="24" fill={C.turq} fontSize="11" fontWeight="700" letterSpacing="1">
+      <rect width="236" height="64" rx="10" fill={C.card} stroke={C.accent} strokeOpacity="0.5" />
+      <text x="14" y="24" fill={C.accent} fontSize="12" fontWeight="700">
         {title}
       </text>
       <text x="14" y="46" fill={C.text} fontSize="14" fontWeight="700">
@@ -272,7 +267,7 @@ function RoutesScene({ animate, cycle }: SceneProps) {
           }}
           d={ROUTES[i]}
           fill="none"
-          stroke={i === 0 ? C.turq : C.line}
+          stroke={i === 0 ? C.accent : C.line}
           strokeWidth={i === 0 ? 5 : 3}
           strokeLinecap="round"
           pathLength={1}
@@ -297,7 +292,7 @@ function RoutesScene({ animate, cycle }: SceneProps) {
         <Checkpoint key={`${d.x.toFixed(1)}-${d.y.toFixed(1)}`} {...d} />
       ))}
       <Endpoints from={[60, 250]} to={[760, 90]} />
-      <Tag x={40} y={24} title="★ RECOMMENDED" value="Route A · 0 Severe mi" />
+      <Tag x={40} y={24} title="Recommended" value="Route A, no Severe miles" />
     </Svg>
   );
 }
@@ -324,7 +319,7 @@ function EtaScene({ animate, cycle }: SceneProps) {
         id="fc-eta-path"
         d={ETA_PATH}
         fill="none"
-        stroke={C.turq}
+        stroke={C.accent}
         strokeWidth="5"
         strokeLinecap="round"
       />
@@ -332,7 +327,7 @@ function EtaScene({ animate, cycle }: SceneProps) {
         <g key={i}>
           <Checkpoint {...d} r={7} />
           <g transform={`translate(${d.x - 52} ${d.y + (i % 2 ? 18 : -46)})`}>
-            <rect width="104" height="28" rx="6" fill={C.card} stroke="#2c3f4a" />
+            <rect width="104" height="28" rx="6" fill={C.card} stroke="#c9d2dc" />
             <text x="52" y="18" textAnchor="middle" fill={C.text} fontSize="12" fontWeight="600">
               {ETA_STOPS[i].label}
             </text>
@@ -348,11 +343,11 @@ function EtaScene({ animate, cycle }: SceneProps) {
             width="26"
             height="16"
             rx="4"
-            fill="#fff"
+            fill={C.text}
             stroke={C.bg}
             strokeWidth="2"
           />
-          <rect x="5" y="-6" width="6" height="12" rx="2" fill={C.turq} />
+          <rect x="5" y="-6" width="6" height="12" rx="2" fill={C.accent} />
           <animateMotion
             begin="indefinite"
             ref={start}
@@ -365,7 +360,12 @@ function EtaScene({ animate, cycle }: SceneProps) {
           </animateMotion>
         </g>
       )}
-      <Tag x={40} y={24} title="DEPART 8:00 · EVERY 25 MI" value="Forecast at each ETA" />
+      <Tag
+        x={40}
+        y={24}
+        title="Departs 8:00, checks every 25 mi"
+        value="Forecast at each arrival"
+      />
     </Svg>
   );
 }
@@ -378,13 +378,13 @@ const LOAD_LIMIT_LB = 30_000;
 function Truck({ weight }: { weight: string }) {
   return (
     <g>
-      <rect width="150" height="50" rx="6" fill="#2c3f4a" />
-      <rect x="6" y="6" width="138" height="3" rx="1.5" fill="#3b5260" />
+      <rect width="150" height="50" rx="6" fill="#c9d2dc" />
+      <rect x="6" y="6" width="138" height="3" rx="1.5" fill="#9aa8b6" />
       <text x="75" y="33" textAnchor="middle" fill={C.text} fontSize="15" fontWeight="700">
         {weight}
       </text>
-      <path d="M156 50 V18 a6 6 0 0 1 6 -6 h22 l14 16 v22 z" fill="#3b5260" />
-      <path d="M166 18 h16 l9 11 h-25 z" fill="#0f171c" />
+      <path d="M156 50 V18 a6 6 0 0 1 6 -6 h22 l14 16 v22 z" fill="#9aa8b6" />
+      <path d="M166 18 h16 l9 11 h-25 z" fill="#e7ebef" />
       {[22, 52, 128, 180].map((x) => (
         <g key={x}>
           <circle cx={x} cy="56" r="10" fill={C.bg} stroke={C.dim} strokeWidth="3" />
@@ -416,20 +416,20 @@ function LoadCard(props: {
         height="236"
         rx="14"
         fill={C.card}
-        stroke={over ? color : "#2c3f4a"}
+        stroke={over ? color : "#c9d2dc"}
         strokeOpacity={over ? 0.6 : 1}
       />
       <g transform="translate(70 18)">
         <Truck weight={`${weightLb.toLocaleString("en-US")} lb`} />
       </g>
 
-      <text x="24" y="122" fill={C.dim} fontSize="11" fontWeight="700" letterSpacing="1">
-        GROSS WEIGHT
+      <text x="24" y="122" fill={C.dim} fontSize="12" fontWeight="700">
+        Gross weight
       </text>
-      <text x={limitX} y="122" textAnchor="middle" fill={C.turq} fontSize="11" fontWeight="700">
+      <text x={limitX} y="122" textAnchor="middle" fill={C.accent} fontSize="11" fontWeight="700">
         30,000 lb limit
       </text>
-      <rect x="24" y="132" width={barW} height="8" rx="4" fill="#0f171c" />
+      <rect x="24" y="132" width={barW} height="8" rx="4" fill="#e7ebef" />
       <rect x="24" y="132" width={fillW} height="8" rx="4" fill={over ? color : C.dim}>
         {animate && (
           <animate
@@ -451,19 +451,19 @@ function LoadCard(props: {
         x2={limitX}
         y1="127"
         y2="145"
-        stroke={C.turq}
+        stroke={C.accent}
         strokeWidth="2"
         strokeDasharray="3 2"
       />
-      <text x="24" y="160" fill="#64748b" fontSize="10">
+      <text x="24" y="160" fill="#5b6b7d" fontSize="10">
         0
       </text>
-      <text x={24 + barW} y="160" textAnchor="end" fill="#64748b" fontSize="10">
+      <text x={24 + barW} y="160" textAnchor="end" fill="#5b6b7d" fontSize="10">
         50,000 lb
       </text>
 
-      <text x="24" y="188" fill={C.dim} fontSize="11" fontWeight="700" letterSpacing="1">
-        RISK
+      <text x="24" y="188" fill={C.dim} fontSize="12" fontWeight="700">
+        Risk
       </text>
       <text x="24" y="216" fill={color} fontSize="24" fontWeight="800">
         {LEVELS[level].label}
@@ -486,7 +486,7 @@ function LoadScene({ animate, cycle }: SceneProps) {
           height="46"
           rx="23"
           fill={C.card}
-          stroke={C.turq}
+          stroke={C.accent}
           strokeOpacity="0.45"
         />
         <g transform="translate(-134 51)">
@@ -495,7 +495,7 @@ function LoadScene({ animate, cycle }: SceneProps) {
               key={i}
               d={`M0 ${-8 + i * 8} q 8 -4 16 0 t 16 0`}
               fill="none"
-              stroke={C.turq}
+              stroke={C.accent}
               strokeWidth="2"
               strokeLinecap="round"
             >
@@ -523,14 +523,14 @@ function LoadScene({ animate, cycle }: SceneProps) {
         <path
           d="M-60 74 C -60 92, -185 88, -185 104"
           fill="none"
-          stroke="#2c3f4a"
+          stroke="#c9d2dc"
           strokeWidth="2"
           strokeDasharray="4 4"
         />
         <path
           d="M60 74 C 60 92, 185 88, 185 104"
           fill="none"
-          stroke="#2c3f4a"
+          stroke="#c9d2dc"
           strokeWidth="2"
           strokeDasharray="4 4"
         />
@@ -596,11 +596,11 @@ function CorridorScene({ animate, cycle }: SceneProps) {
           </ellipse>
         </g>
       </g>
-      <path d={route} fill="none" stroke={C.turq} strokeWidth="4" strokeLinecap="round" />
+      <path d={route} fill="none" stroke={C.accent} strokeWidth="4" strokeLinecap="round" />
       <Endpoints from={[80, 200]} to={[760, 130]} />
       <g transform="translate(160 300)">
-        <rect width="500" height="6" y="-3" rx="3" fill="#2c3f4a" />
-        <circle key={cycle} cx="0" cy="0" r="10" fill={C.turq} stroke={C.bg} strokeWidth="3">
+        <rect width="500" height="6" y="-3" rx="3" fill="#c9d2dc" />
+        <circle key={cycle} cx="0" cy="0" r="10" fill={C.accent} stroke={C.bg} strokeWidth="3">
           {animate && (
             <animate
               begin="indefinite"
@@ -619,7 +619,7 @@ function CorridorScene({ animate, cycle }: SceneProps) {
           </text>
         ))}
       </g>
-      <Tag x={40} y={24} title="CORRIDOR · 0–48 H" value="Storm crosses the route" />
+      <Tag x={40} y={24} title="Corridor, next 48 hours" value="Storm crosses the route" />
     </Svg>
   );
 }

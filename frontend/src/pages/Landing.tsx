@@ -10,140 +10,101 @@ const RULES = [
 ];
 
 const STEPS = [
-  ["Enter the trip", "Origin, destination, departure time and load weight."],
+  ["Enter the trip", "Start, destination, departure time and the load's weight."],
   [
     "Every checkpoint is graded",
-    "Each route is sampled every 10, 25 or 50 miles and graded with the forecast at its ETA.",
+    "Each route is checked every 10, 25 or 50 miles against the forecast for the hour the truck gets there.",
   ],
   [
     "Take the safest route",
-    "Fewest Severe miles, then fewest High miles, then lowest average risk, then time.",
+    "Fewest Severe miles wins, then fewest High miles, then the lowest average risk, then the shortest time.",
   ],
 ];
 
-const primaryCta =
-  "bg-teal shadow-teal/25 inline-flex items-center justify-center gap-2 rounded-lg px-6 py-3 font-bold text-white shadow-lg transition duration-200 hover:-translate-y-0.5 hover:bg-[#009494] hover:shadow-xl hover:shadow-teal/30 motion-reduce:hover:translate-y-0";
+const primaryButton =
+  "bg-shield hover:bg-shield-dark inline-flex items-center justify-center rounded-md px-5 py-2.5 text-[15px] font-bold text-white transition-colors";
 
 export default function Landing() {
   return (
-    <div className="bg-ink-950 min-h-full">
-      <header className="border-ink-700/60 bg-ink-950/80 sticky top-0 z-20 border-b backdrop-blur">
-        <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-          <a href="/" className="flex items-center gap-2 font-bold tracking-tight">
+    <div className="bg-paper min-h-full">
+      <header className="border-rule bg-panel sticky top-0 z-20 border-b">
+        <nav className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3">
+          <a href="/" className="flex items-center gap-2 text-[17px] font-extrabold">
             <Logo className="h-7 w-7" />
-            <span>
-              Weather<span className="text-turq">Route</span>
-            </span>
+            WeatherRoute
           </a>
-          <div className="flex items-center gap-6 text-sm">
-            <a href="#how" className="hidden text-slate-300 transition hover:text-white sm:inline">
+          <div className="flex items-center gap-6 text-[15px]">
+            <a href="#how" className="text-ink-2 hover:text-ink hidden sm:inline">
               How it works
             </a>
-            <a
-              href="#rules"
-              className="hidden text-slate-300 transition hover:text-white sm:inline"
-            >
+            <a href="#rules" className="text-ink-2 hover:text-ink hidden sm:inline">
               Risk rules
             </a>
-            <a
-              href="/app"
-              className="bg-teal rounded-lg px-4 py-2 font-bold text-white transition hover:bg-[#009494]"
-            >
-              Plan a route
+            <a href="/app" className={primaryButton}>
+              Plan a trip
             </a>
           </div>
         </nav>
       </header>
 
-      <section className="from-deep via-ink-900 to-ink-950 relative overflow-hidden bg-gradient-to-b">
-        <div
-          aria-hidden
-          className="absolute inset-0 [background-image:linear-gradient(#40e0d0_1px,transparent_1px),linear-gradient(90deg,#40e0d0_1px,transparent_1px)] [mask-image:radial-gradient(ellipse_at_top,black_40%,transparent_75%)] [background-size:48px_48px] opacity-[0.08]"
-        />
-        <div className="relative mx-auto max-w-6xl px-4 pt-14 pb-16 text-center sm:pt-20 md:pt-24">
-          <div className="motion-safe:animate-fade-up">
-            <span className="border-turq/30 bg-turq/10 text-turq inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold">
-              <span className="bg-turq h-1.5 w-1.5 rounded-full" />
-              Weather at every checkpoint, at your arrival time
-            </span>
-            <h1 className="mx-auto mt-6 max-w-4xl pb-1 text-4xl leading-[1.1] font-extrabold tracking-tight text-balance sm:text-5xl md:text-6xl">
-              Route your truck around the <span className="text-turq">weather</span>
-            </h1>
-            <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-pretty text-slate-300 md:text-lg">
-              Compare three routes by the forecast at the truck's arrival time, its load weight and
-              travel time, and get a clear recommendation before the wheels turn.
-            </p>
-            <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <a href="/app" className={`${primaryCta} w-full sm:w-auto`}>
-                Plan a route
-                <span aria-hidden>→</span>
-              </a>
-              <a
-                href="#rules"
-                className="border-ink-600 hover:border-ink-600 hover:bg-ink-800 w-full rounded-lg border px-6 py-3 font-semibold text-slate-200 transition sm:w-auto"
-              >
-                See the risk rules
-              </a>
-            </div>
+      <section className="mx-auto grid max-w-6xl gap-10 px-5 pt-12 pb-16 md:pt-16 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:items-center lg:gap-14">
+        <div className="motion-safe:animate-fade-up">
+          <h1 className="text-[40px] leading-[1.04] font-black tracking-[-0.01em] text-balance sm:text-[52px] lg:text-[60px]">
+            Route your truck around the weather
+          </h1>
+          <p className="text-ink-2 mt-5 max-w-[34rem] text-[17px] leading-relaxed text-pretty">
+            Compare three routes by the forecast for the hour the truck reaches each stretch of
+            road, its load weight and travel time. Get one recommendation, and the reason it won.
+          </p>
+          <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-3">
+            <a href="/app" className={primaryButton}>
+              Plan a trip
+            </a>
+            <a
+              href="#rules"
+              className="text-shield decoration-shield/40 hover:decoration-shield text-[15px] font-semibold underline underline-offset-4"
+            >
+              See the risk rules
+            </a>
           </div>
-          <div className="motion-safe:animate-fade-up [animation-delay:150ms]">
-            <FeatureCarousel />
-          </div>
+        </div>
+        <div className="motion-safe:animate-fade-up min-w-0 [animation-delay:120ms]">
+          <FeatureCarousel />
         </div>
       </section>
 
-      <section id="how" className="border-ink-800 bg-ink-900/50 scroll-mt-16 border-y">
-        <div className="mx-auto max-w-6xl px-4 py-16 md:py-20">
-          <p className="text-turq text-center text-xs font-bold tracking-widest uppercase">
-            How it works
-          </p>
-          <h2 className="mt-2 text-center text-3xl font-extrabold tracking-tight text-balance">
-            From trip to recommendation in three steps
-          </h2>
-          <ol className="relative mt-12 grid gap-4 md:grid-cols-3 md:gap-6">
-            {/* The line that links the steps on wide screens. */}
-            <span
-              aria-hidden
-              className="from-turq/0 via-turq/40 to-turq/0 absolute top-5 right-[16%] left-[16%] hidden h-px bg-gradient-to-r md:block"
-            />
+      <section id="how" className="border-rule bg-panel scroll-mt-16 border-y">
+        <div className="mx-auto max-w-6xl px-5 py-14">
+          <h2 className="text-[28px] font-extrabold">How it works</h2>
+          <ol className="divide-rule mt-8 grid gap-y-6 md:grid-cols-3 md:divide-x">
             {STEPS.map(([title, body], i) => (
-              <li
-                key={title}
-                className="border-ink-700 bg-ink-900 hover:border-ink-600 relative rounded-xl border p-5 text-center transition md:border-0 md:bg-transparent md:p-0"
-              >
-                <span className="border-turq/40 bg-ink-900 text-turq relative mx-auto grid h-10 w-10 place-items-center rounded-full border font-extrabold">
+              <li key={title} className="md:px-6 md:first:pl-0 md:last:pr-0">
+                <span className="text-shield text-[40px] leading-none font-black tabular-nums">
                   {i + 1}
                 </span>
-                <h3 className="mt-4 font-bold">{title}</h3>
-                <p className="mx-auto mt-1.5 max-w-xs text-sm leading-relaxed text-slate-400">
-                  {body}
-                </p>
+                <h3 className="mt-3 text-[17px] font-bold">{title}</h3>
+                <p className="text-ink-2 mt-1.5 max-w-xs text-[15px] leading-relaxed">{body}</p>
               </li>
             ))}
           </ol>
         </div>
       </section>
 
-      <section id="rules" className="mx-auto max-w-6xl scroll-mt-16 px-4 py-16 md:py-20">
-        <p className="text-turq text-center text-xs font-bold tracking-widest uppercase">
-          Risk rules
-        </p>
-        <h2 className="mt-2 text-center text-3xl font-extrabold tracking-tight text-balance">
-          The thresholds behind every grade
-        </h2>
-        <p className="mx-auto mt-3 max-w-2xl text-center text-slate-400">
+      <section id="rules" className="mx-auto max-w-6xl scroll-mt-16 px-5 py-14">
+        <h2 className="text-[28px] font-extrabold">The thresholds behind every grade</h2>
+        <p className="text-ink-2 mt-2 max-w-2xl text-[15px]">
           Each checkpoint takes the worst of its wind, rain and snow levels, then the load rules
           apply.
         </p>
-        <div className="border-ink-700 mt-10 overflow-x-auto rounded-xl border">
-          <table className="w-full min-w-[560px] text-sm">
-            <thead className="bg-ink-800">
+        <div className="border-rule mt-8 overflow-x-auto rounded-md border bg-white">
+          <table className="w-full min-w-[560px] text-[14px]">
+            <thead className="bg-[#f7f9fb] shadow-[inset_0_-1px_0_var(--color-rule)]">
               <tr>
-                <th className="px-4 py-3 text-left font-semibold text-slate-300">Condition</th>
+                <th className="text-ink-2 px-4 py-3 text-left font-semibold">Condition</th>
                 {LEVELS.map((l) => (
-                  <th key={l.key} className="px-4 py-3 text-left font-semibold">
-                    <span className="inline-flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full" style={{ background: l.color }} />
+                  <th key={l.key} className="px-4 py-3 text-left font-bold">
+                    <span className="inline-flex items-center gap-2" style={{ color: l.ink }}>
+                      <span className="h-2.5 w-2.5 rounded-[2px]" style={{ background: l.color }} />
                       {l.label}
                     </span>
                   </th>
@@ -152,10 +113,10 @@ export default function Landing() {
             </thead>
             <tbody>
               {RULES.map((r) => (
-                <tr key={r.name} className="border-ink-700 hover:bg-ink-900 border-t transition">
-                  <td className="px-4 py-3 font-semibold text-slate-200">{r.name}</td>
+                <tr key={r.name} className="border-rule-2 border-t">
+                  <td className="px-4 py-3 font-semibold">{r.name}</td>
                   {r.values.map((v) => (
-                    <td key={v} className="px-4 py-3 text-slate-300 tabular-nums">
+                    <td key={v} className="text-ink-2 px-4 py-3 tabular-nums">
                       {v}
                     </td>
                   ))}
@@ -164,18 +125,18 @@ export default function Landing() {
             </tbody>
           </table>
         </div>
-        <div className="mt-6 grid gap-4 md:grid-cols-2">
-          <div className="border-ink-700 bg-ink-900 hover:border-ink-600 rounded-xl border p-5 transition">
-            <h3 className="font-bold">Load rules</h3>
-            <ul className="mt-3 space-y-2 text-sm text-slate-300">
-              <li>≥ 55 mph wind → No Travel for any load</li>
-              <li>45–54 mph wind with a load over 30,000 lb → No Travel</li>
-              <li>35–44 mph wind with a load over 40,000 lb → Severe</li>
+        <div className="mt-10 grid gap-10 md:grid-cols-2">
+          <div className="border-ink border-t-2 pt-4">
+            <h3 className="text-[17px] font-bold">Load rules</h3>
+            <ul className="text-ink-2 mt-3 space-y-2 text-[15px]">
+              <li>Wind at 55 mph or more is No Travel for any load.</li>
+              <li>Wind of 45–54 mph with a load over 30,000 lb is No Travel.</li>
+              <li>Wind of 35–44 mph with a load over 40,000 lb is Severe.</li>
             </ul>
           </div>
-          <div className="border-ink-700 bg-ink-900 hover:border-ink-600 rounded-xl border p-5 transition">
-            <h3 className="font-bold">Recommendation order</h3>
-            <ol className="mt-3 list-inside list-decimal space-y-2 text-sm text-slate-300">
+          <div className="border-ink border-t-2 pt-4">
+            <h3 className="text-[17px] font-bold">How the recommendation is chosen</h3>
+            <ol className="text-ink-2 mt-3 list-inside list-decimal space-y-2 text-[15px]">
               <li>Fewest Severe miles</li>
               <li>Fewest High miles</li>
               <li>Lowest average risk</li>
@@ -185,34 +146,27 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="border-ink-800 relative overflow-hidden border-t">
-        <div
-          aria-hidden
-          className="from-deep/80 to-ink-950 absolute inset-0 bg-gradient-to-br via-transparent"
-        />
-        <div className="relative mx-auto flex max-w-6xl flex-col items-center gap-5 px-4 py-16 text-center">
-          <h2 className="text-3xl font-extrabold tracking-tight text-balance">
-            Check your next trip before it starts
-          </h2>
-          <p className="max-w-xl text-slate-400">
-            Three routes, graded checkpoint by checkpoint, in a few seconds.
-          </p>
-          <a href="/app" className={primaryCta}>
-            Plan a route
-            <span aria-hidden>→</span>
+      <section className="bg-ink text-white">
+        <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-5 px-5 py-12 sm:flex-row sm:items-center">
+          <h2 className="text-[26px] font-extrabold">Check your next trip before it starts.</h2>
+          <a
+            href="/app"
+            className="text-ink inline-flex items-center rounded-md bg-white px-5 py-2.5 text-[15px] font-bold transition-colors hover:bg-[#e3e9f2]"
+          >
+            Plan a trip
           </a>
         </div>
       </section>
 
-      <footer className="border-ink-800 border-t">
-        <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-6 text-xs text-slate-400 sm:flex-row sm:items-center sm:justify-between">
-          <span>
-            Weather: Open-Meteo · Routing: Geoapify or HERE truck routing when configured, otherwise
-            OSRM · Map: © OpenStreetMap, © CARTO
-          </span>
+      <footer className="border-rule border-t">
+        <div className="text-ink-3 mx-auto flex max-w-6xl flex-col gap-2 px-5 py-6 text-[13px] sm:flex-row sm:justify-between">
+          <p>
+            Weather from Open-Meteo. Routing by Geoapify or HERE when configured, otherwise OSRM.
+            Map data © OpenStreetMap, © CARTO.
+          </p>
           <a
             href="https://github.com/saadabrar1/Weather-Aware-Truck-Routing-"
-            className="transition hover:text-white"
+            className="hover:text-ink shrink-0"
           >
             Source on GitHub
           </a>
