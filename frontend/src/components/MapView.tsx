@@ -14,10 +14,15 @@ import { useEffect, useRef, useState } from "react";
 import type { Checkpoint, Heatmap, Plan, RouteOption } from "../api";
 import { LEVELS, ROUTE_LETTERS, formatTime } from "../risk";
 import type { CheckpointFocus } from "./RouteCards";
+import { shieldSvg } from "./Shield";
 
 setWorkerUrl(workerUrl);
 
-const STYLE_URL = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
+// Positron: a quiet light basemap, so the routes and risk colours carry the map.
+const STYLE_URL = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
+const SHIELD_BLUE = "#1f4e9c";
+const ALT_SLATE = "#6f7f91";
+const INK = "#13253a";
 const EMPTY: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: [] };
 
 const levelColor: ExpressionSpecification = [
@@ -39,7 +44,7 @@ function heatColor(hour: number): ExpressionSpecification {
 
 // Calm (Low) is the usual case, so it stays a faint wash and real risk stands out.
 function heatOpacity(hour: number): ExpressionSpecification {
-  return ["case", ["==", ["get", `h${hour}`], 0], 0.11, 0.42] as ExpressionSpecification;
+  return ["case", ["==", ["get", `h${hour}`], 0], 0.06, 0.5] as ExpressionSpecification;
 }
 
 type Props = {
@@ -110,7 +115,7 @@ export default function MapView({
           "circle-opacity": heatOpacity(0),
         },
       });
-      // Colour says "recommended" (turquoise) or "alternative" (grey); width and
+      // Colour says "recommended" (interstate blue) or "alternative" (grey); width and
       // a glow say "selected". The two never share a cue, so choosing an
       // alternative can't make it look recommended.
       map.addLayer({
@@ -120,10 +125,10 @@ export default function MapView({
         filter: ["==", ["get", "selected"], true],
         layout: { "line-join": "round", "line-cap": "round" },
         paint: {
-          "line-color": ["case", ["get", "recommended"], "#40e0d0", "#e2e8f0"],
-          "line-width": 18,
-          "line-blur": 10,
-          "line-opacity": 0.35,
+          "line-color": ["case", ["get", "recommended"], SHIELD_BLUE, ALT_SLATE],
+          "line-width": 16,
+          "line-blur": 6,
+          "line-opacity": 0.22,
         },
       });
       map.addLayer({
@@ -131,7 +136,7 @@ export default function MapView({
         type: "line",
         source: "routes",
         layout: { "line-join": "round", "line-cap": "round", "line-sort-key": ["get", "z"] },
-        paint: { "line-color": "#0b1014", "line-width": ["case", ["get", "selected"], 10, 6] },
+        paint: { "line-color": "#ffffff", "line-width": ["case", ["get", "selected"], 10, 6] },
       });
       map.addLayer({
         id: "routes",
@@ -139,9 +144,9 @@ export default function MapView({
         source: "routes",
         layout: { "line-join": "round", "line-cap": "round", "line-sort-key": ["get", "z"] },
         paint: {
-          "line-color": ["case", ["get", "recommended"], "#40e0d0", "#7b8f9a"],
-          "line-width": ["case", ["get", "selected"], 6, 3],
-          "line-opacity": ["case", ["get", "selected"], 1, 0.75],
+          "line-color": ["case", ["get", "recommended"], SHIELD_BLUE, ALT_SLATE],
+          "line-width": ["case", ["get", "selected"], 6, 3.5],
+          "line-opacity": ["case", ["get", "selected"], 1, 0.85],
         },
       });
       map.addLayer({
@@ -153,7 +158,7 @@ export default function MapView({
           "circle-color": levelColor,
           "circle-radius": ["case", ["get", "selected"], 6, 4],
           "circle-opacity": ["case", ["get", "selected"], 1, 0.75],
-          "circle-stroke-color": "#0b1014",
+          "circle-stroke-color": "#ffffff",
           "circle-stroke-width": 1.5,
         },
       });
@@ -163,7 +168,7 @@ export default function MapView({
         id: "truck-halo",
         type: "circle",
         source: "truck",
-        paint: { "circle-radius": 16, "circle-color": "#40e0d0", "circle-opacity": 0.25 },
+        paint: { "circle-radius": 15, "circle-color": SHIELD_BLUE, "circle-opacity": 0.2 },
       });
       map.addLayer({
         id: "truck",
@@ -171,9 +176,9 @@ export default function MapView({
         source: "truck",
         paint: {
           "circle-radius": 7,
-          "circle-color": "#ffffff",
-          "circle-stroke-color": "#0b1014",
-          "circle-stroke-width": 3,
+          "circle-color": INK,
+          "circle-stroke-color": "#ffffff",
+          "circle-stroke-width": 2.5,
         },
       });
 
@@ -184,8 +189,8 @@ export default function MapView({
         source: "focus",
         paint: {
           "circle-radius": 11,
-          "circle-color": "rgba(64,224,208,0.15)",
-          "circle-stroke-color": "#40e0d0",
+          "circle-color": "rgba(31,78,156,0.12)",
+          "circle-stroke-color": SHIELD_BLUE,
           "circle-stroke-width": 2.5,
         },
       });
@@ -330,7 +335,7 @@ export default function MapView({
     // Leave room on desktop for the map key (top right), the forecast panel
     // (bottom left) and the endpoint labels, so no route ends up underneath.
     map.fitBounds(bounds, {
-      padding: mobile ? 40 : { top: 60, right: 260, bottom: 230, left: 80 },
+      padding: mobile ? 40 : { top: 60, right: 280, bottom: 60, left: 80 },
       duration: 800,
     });
   }, [plan, ready]);
@@ -369,34 +374,30 @@ function labelPoint(route: RouteOption, fraction: number): [number, number] {
   return g[Math.min(g.length - 1, Math.floor(g.length * fraction))];
 }
 
+// Route shields on the lines; the selected one is drawn larger.
 function routeLabel(letter: string, recommended: boolean, selected: boolean): HTMLElement {
   const el = document.createElement("button");
   el.type = "button";
-  el.textContent = letter;
   el.setAttribute("aria-label", `Select route ${letter}`);
-  el.className = [
-    "grid h-7 w-7 cursor-pointer place-items-center rounded-lg border-2 text-sm font-extrabold shadow-lg",
-    recommended
-      ? "border-ink-950 bg-turq text-ink-950"
-      : "border-ink-950 bg-ink-600 text-slate-100",
-    selected ? "ring-2 ring-turq ring-offset-2 ring-offset-ink-950" : "",
-  ].join(" ");
+  el.className = "block cursor-pointer drop-shadow-[0_1px_1px_rgba(19,37,58,0.35)]";
+  // Letters come from the fixed A/B/C list, never user input.
+  el.innerHTML = shieldSvg(letter, recommended, selected ? 34 : 26);
   return el;
 }
 
 // The pin keeps the marker's anchor; the place name hangs to its right.
 function endpoint(kind: "start" | "end", label?: string, labelLeft = false): HTMLElement {
-  const role = kind === "start" ? "Origin" : "Destination";
+  const role = kind === "start" ? "From" : "To";
   const el = document.createElement("div");
   el.className = "relative h-4 w-4";
   el.title = label ? `${role}: ${label}` : role;
   const pin = document.createElement("div");
   pin.className =
     kind === "start"
-      ? "h-4 w-4 rounded-full border-[3px] border-white bg-ink-950 shadow-lg"
-      : "h-4 w-4 rotate-45 rounded-sm border-[3px] border-white bg-turq shadow-lg";
+      ? "h-4 w-4 rounded-full border-[3px] border-ink bg-white shadow"
+      : "h-3.5 w-3.5 rotate-45 rounded-[2px] border-2 border-white bg-ink shadow";
   const tag = document.createElement("div");
-  tag.className = `pointer-events-none absolute top-1/2 ${labelLeft ? "right-6" : "left-6"} -translate-y-1/2 whitespace-nowrap rounded-md border border-ink-600 bg-ink-900/90 px-1.5 py-0.5 text-[11px] font-semibold text-slate-100 shadow-lg`;
+  tag.className = `pointer-events-none absolute top-1/2 ${labelLeft ? "right-6" : "left-6"} -translate-y-1/2 whitespace-nowrap rounded border border-rule bg-white px-1.5 py-0.5 text-[12px] text-ink shadow-sm`;
   // textContent, never innerHTML: the label is user-chosen text.
   // City and state: many US place names repeat across states (there is a Dallas
   // in Texas, Iowa, Missouri and Alabama), so the city alone can hide a wrong pick.
@@ -405,7 +406,7 @@ function endpoint(kind: "start" | "end", label?: string, labelLeft = false): HTM
     .slice(0, 2)
     .map((s) => s.trim())
     .join(", ");
-  tag.textContent = place ? `${role} · ${place}` : role;
+  tag.textContent = place ? `${role} ${place}` : kind === "start" ? "Start" : "Destination";
   el.append(pin, tag);
   return el;
 }
@@ -417,19 +418,21 @@ function escapeHtml(s: string): string {
 function popupHtml(cp: Checkpoint, letter: string): string {
   const level = LEVELS[cp.level];
   const reasons = cp.reasons.length
-    ? `<div class="mt-1 text-xs text-slate-400">${cp.reasons.map(escapeHtml).join("<br/>")}</div>`
+    ? `<div class="mt-1 text-xs text-ink-2">${cp.reasons.map(escapeHtml).join("<br/>")}</div>`
     : "";
   return `
     <div class="text-sm">
-      <div class="font-semibold">Route ${letter} · mile ${Math.round(cp.mile)}</div>
-      <div class="text-slate-400">ETA ${escapeHtml(formatTime(cp.eta))}</div>
-      <div class="mt-1 inline-flex items-center gap-1.5 font-medium">
+      <div class="font-bold">Route ${letter}, mile ${Math.round(cp.mile)}</div>
+      <div class="text-ink-3">Truck arrives ${escapeHtml(formatTime(cp.eta))}</div>
+      <div class="mt-1 inline-flex items-center gap-1.5 font-bold" style="color:${level.ink}">
         <span style="background:${level.color}" class="inline-block h-2.5 w-2.5 rounded-full"></span>
         ${level.label}
       </div>
-      <div class="mt-1 text-xs text-slate-400">
-        Wind ${cp.wind_mph} mph · Rain ${cp.rain_in_hr.toFixed(2)} in/hr · Snow ${cp.snow_in_hr.toFixed(2)} in/hr
-      </div>
+      <table class="mt-1 text-xs text-ink-2"><tbody>
+        <tr><td class="pr-3">Wind</td><td class="text-right">${cp.wind_mph} mph</td></tr>
+        <tr><td class="pr-3">Rain</td><td class="text-right">${cp.rain_in_hr.toFixed(2)} in/hr</td></tr>
+        <tr><td class="pr-3">Snow</td><td class="text-right">${cp.snow_in_hr.toFixed(2)} in/hr</td></tr>
+      </tbody></table>
       ${reasons}
     </div>`;
 }

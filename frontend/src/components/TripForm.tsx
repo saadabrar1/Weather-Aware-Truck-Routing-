@@ -56,7 +56,7 @@ export default function TripForm({ loading, onSubmit }: Props) {
         onChange={setDestination}
         placeholder="e.g. Salt Lake City, UT"
       />
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)] gap-3">
         <div>
           <label htmlFor="departure" className={labelClass}>
             Departure
@@ -91,14 +91,12 @@ export default function TripForm({ loading, onSubmit }: Props) {
       </div>
       <fieldset>
         <legend className={labelClass}>Weather checkpoint every</legend>
-        <div className="border-ink-600 bg-ink-800 grid grid-cols-3 gap-1 rounded-lg border p-1 text-sm">
+        <div className="border-rule grid grid-cols-3 overflow-hidden rounded-md border bg-white text-[14px]">
           {INTERVALS.map((mi) => (
             <label
               key={mi}
-              className={`has-focus-visible:ring-turq/40 cursor-pointer rounded-md py-1.5 text-center transition has-focus-visible:ring-2 ${
-                intervalMi === mi
-                  ? "bg-teal font-semibold text-white"
-                  : "hover:bg-ink-700 text-slate-300"
+              className={`has-focus-visible:ring-shield/40 border-rule cursor-pointer border-l py-2 text-center transition-colors first:border-l-0 has-focus-visible:ring-2 has-focus-visible:ring-inset ${
+                intervalMi === mi ? "bg-ink font-bold text-white" : "text-ink-2 hover:bg-rule-2"
               }`}
             >
               <input
@@ -117,7 +115,7 @@ export default function TripForm({ loading, onSubmit }: Props) {
       <button
         type="submit"
         disabled={!valid || loading}
-        className="bg-teal shadow-teal/20 disabled:bg-ink-700 w-full rounded-lg py-2.5 text-sm font-bold text-white shadow-lg transition hover:bg-[#009494] disabled:cursor-not-allowed disabled:text-slate-400 disabled:shadow-none"
+        className="bg-shield hover:bg-shield-dark disabled:bg-rule disabled:text-ink-3 w-full rounded-md py-2.5 text-[15px] font-bold text-white transition-colors disabled:cursor-not-allowed"
       >
         {loading ? "Checking routes and forecasts…" : "Find the safest route"}
       </button>

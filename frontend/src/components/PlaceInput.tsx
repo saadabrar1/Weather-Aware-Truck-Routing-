@@ -80,14 +80,14 @@ export default function PlaceInput({ label, value, onChange, placeholder }: Prop
         <ul
           id={`${id}-list`}
           role="listbox"
-          className="border-ink-600 bg-ink-800 absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-lg border py-1 text-sm shadow-xl shadow-black/40"
+          className="border-rule absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md border bg-white py-1 text-[14px] shadow-lg"
         >
           {options.map((p, i) => (
             <li
               key={`${p.lat},${p.lon},${i}`}
               role="option"
               aria-selected={i === active}
-              className={`cursor-pointer px-3 py-1.5 text-slate-200 ${i === active ? "bg-teal/25 text-white" : ""}`}
+              className={`text-ink cursor-pointer px-3 py-1.5 ${i === active ? "bg-[#edf2fa]" : ""}`}
               onMouseDown={() => choose(p)}
               onMouseEnter={() => setActive(i)}
             >

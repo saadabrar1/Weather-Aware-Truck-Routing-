@@ -96,36 +96,45 @@ export default function Planner() {
   };
 
   return (
-    <div className="flex h-full flex-col md:flex-row">
+    <div className="bg-paper flex min-h-full flex-col md:h-full md:flex-row">
+      {/* Phones get the header above everything, since the map moves to the
+          top once there are results; on desktop it heads the sidebar. */}
+      <header className="border-rule bg-panel order-0 flex items-center justify-between border-b px-4 py-3 md:hidden">
+        <a href="/" className="flex items-center gap-2 text-[17px] font-extrabold">
+          <Logo className="h-7 w-7" />
+          WeatherRoute
+        </a>
+        {plan && <span className="text-ink-3 text-[13px]">Routes by {plan.provider}</span>}
+      </header>
       <aside
-        className={`${plan ? "order-2" : "order-1"} border-ink-700 bg-ink-900 flex w-full shrink-0 flex-col overflow-y-auto md:order-1 md:w-[420px] md:border-r`}
+        className={`${plan ? "order-2" : "order-1"} border-rule bg-panel flex w-full shrink-0 flex-col md:order-1 md:w-[430px] md:overflow-y-auto md:border-r`}
       >
-        <header className="border-ink-700 bg-ink-900/95 sticky top-0 z-10 flex items-center justify-between border-b px-4 py-3 backdrop-blur">
-          <a href="/" className="flex items-center gap-2 font-bold tracking-tight">
+        <header className="border-rule bg-panel sticky top-0 z-10 hidden items-center justify-between border-b px-5 py-3 md:flex">
+          <a href="/" className="flex items-center gap-2 text-[17px] font-extrabold">
             <Logo className="h-7 w-7" />
-            <span>
-              Weather<span className="text-turq">Route</span>
-            </span>
+            WeatherRoute
           </a>
-          {plan && (
-            <span className="bg-ink-700 rounded-full px-2 py-0.5 text-[11px] font-semibold tracking-wider text-slate-400 uppercase">
-              Routing · {plan.provider}
-            </span>
-          )}
+          {plan && <span className="text-ink-3 text-[13px]">Routes by {plan.provider}</span>}
         </header>
-        <div className="space-y-4 p-4">
+        <div className="space-y-6 px-5 py-5">
+          <div>
+            <h1 className="text-[22px] leading-tight font-extrabold">Plan a trip</h1>
+            <p className="text-ink-3 mt-1 text-[14px]">
+              Three routes, each checked against the forecast for the hour the truck gets there.
+            </p>
+          </div>
           <TripForm loading={loading} onSubmit={search} />
           {error && (
             <div
               role="alert"
-              className="flex items-start justify-between gap-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200"
+              className="flex items-start justify-between gap-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"
             >
               <span>{error}</span>
               {request && (
                 <button
                   type="button"
                   onClick={() => search(request)}
-                  className="shrink-0 rounded-md border border-red-400/40 px-2 py-0.5 text-xs font-semibold text-red-100 hover:bg-red-500/20"
+                  className="shrink-0 rounded-md border border-red-300 bg-white px-2 py-0.5 text-[13px] font-semibold hover:bg-red-100"
                 >
                   Try again
                 </button>
@@ -143,12 +152,13 @@ export default function Planner() {
           )}
         </div>
       </aside>
-      {/* On phones the slider sits under the map instead of covering half of it.
-          Before the first search the form comes first; after it, the map does. */}
+      {/* The map is the work surface; the forecast bar docks under it rather
+          than covering it. Before the first search the form comes first on
+          phones; after it, the map does. */}
       <main
-        className={`${plan ? "order-1" : "order-2"} flex flex-col md:relative md:order-2 md:block md:h-full md:flex-1`}
+        className={`${plan ? "order-1" : "order-2"} flex min-w-0 flex-col md:order-2 md:h-full md:flex-1`}
       >
-        <div className="relative h-[52vh] min-h-[300px] md:h-full">
+        <div className="relative h-[56vh] min-h-[320px] md:h-auto md:min-h-0 md:flex-1">
           <MapView
             plan={plan}
             selectedId={selectedId}
@@ -161,9 +171,10 @@ export default function Planner() {
             destinationLabel={request?.destination.label}
           />
           {!plan && !loading && (
-            <div className="pointer-events-none absolute inset-x-0 top-6 flex justify-center px-4">
-              <p className="border-ink-600 bg-ink-900/85 rounded-full border px-4 py-2 text-center text-sm text-slate-300 backdrop-blur">
-                Enter a trip to compare 3 routes by weather risk at the truck's arrival time
+            <div className="pointer-events-none absolute inset-x-0 top-5 flex justify-center px-4">
+              <p className="border-rule text-ink-2 max-w-md rounded-md border bg-white px-4 py-2.5 text-center text-[14px] shadow-sm">
+                Choose a start, destination and departure time. The routes and their weather appear
+                here.
               </p>
             </div>
           )}
@@ -175,21 +186,17 @@ export default function Planner() {
           )}
         </div>
         {plan && (
-          <div className="border-ink-700 bg-ink-900 border-b p-2 md:absolute md:bottom-8 md:left-4 md:w-[440px] md:border-0 md:bg-transparent md:p-0">
-            <ForecastSlider
-              routeLetter={selectedLetter}
-              routeWorst={routeWorst}
-              truck={truck}
-              heatmap={heatmap}
-              hour={hour}
-              onChange={setHour}
-              loading={heatLoading}
-              error={heatError}
-              onRetry={
-                request && plan ? () => loadHeatmap(plan, request, latest.current) : undefined
-              }
-            />
-          </div>
+          <ForecastSlider
+            routeLetter={selectedLetter}
+            routeWorst={routeWorst}
+            truck={truck}
+            heatmap={heatmap}
+            hour={hour}
+            onChange={setHour}
+            loading={heatLoading}
+            error={heatError}
+            onRetry={request && plan ? () => loadHeatmap(plan, request, latest.current) : undefined}
+          />
         )}
       </main>
     </div>
@@ -198,13 +205,10 @@ export default function Planner() {
 
 function MapLoading() {
   return (
-    <div
-      role="status"
-      className="bg-ink-950/50 absolute inset-0 grid place-items-center backdrop-blur-[2px]"
-    >
-      <div className="border-ink-600 bg-ink-900/95 flex items-center gap-3 rounded-xl border px-4 py-3 shadow-2xl">
-        <span className="border-turq h-5 w-5 animate-spin rounded-full border-2 border-t-transparent motion-reduce:animate-none" />
-        <span className="text-sm text-slate-200">
+    <div role="status" className="bg-paper/55 absolute inset-0 grid place-items-center">
+      <div className="border-rule flex items-center gap-3 rounded-md border bg-white px-4 py-3 shadow-md">
+        <span className="border-shield h-5 w-5 animate-spin rounded-full border-2 border-t-transparent motion-reduce:animate-none" />
+        <span className="text-ink-2 text-[14px]">
           Finding 3 routes and reading the forecast at each checkpoint…
         </span>
       </div>
@@ -214,9 +218,13 @@ function MapLoading() {
 
 function ResultsSkeleton() {
   return (
-    <div className="space-y-2" aria-hidden>
+    <div className="border-rule border-t" aria-hidden>
       {[0, 1, 2].map((i) => (
-        <div key={i} className="bg-ink-800 h-40 animate-pulse rounded-xl" />
+        <div key={i} className="border-rule space-y-2 border-b px-3 py-4">
+          <div className="bg-rule-2 h-4 w-2/3 animate-pulse rounded" />
+          <div className="bg-rule-2 h-2 w-full animate-pulse rounded" />
+          <div className="bg-rule-2 h-3 w-1/2 animate-pulse rounded" />
+        </div>
       ))}
     </div>
   );
