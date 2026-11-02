@@ -217,7 +217,13 @@ export default function MapView({
       setReady(true);
     });
 
-    return () => map.remove();
+    // Keep the canvas matched to its box when the layout around it changes.
+    const observer = new ResizeObserver(() => map.resize());
+    observer.observe(container.current!);
+    return () => {
+      observer.disconnect();
+      map.remove();
+    };
   }, []);
 
   // Routes and checkpoints; the selected route draws on top.
@@ -329,6 +335,9 @@ export default function MapView({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !ready || !plan) return;
+    // The forecast bar mounts under the map with the plan, so the map has just
+    // got shorter; measure it again before fitting, or the fit overshoots.
+    map.resize();
     const bounds = new LngLatBounds();
     for (const r of plan.routes) for (const c of r.geometry) bounds.extend(c);
     const mobile = window.innerWidth < 768;

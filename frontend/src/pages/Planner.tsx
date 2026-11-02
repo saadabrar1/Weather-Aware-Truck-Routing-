@@ -6,13 +6,15 @@ import MapLegend from "../components/MapLegend";
 import MapView from "../components/MapView";
 import RouteCards, { type CheckpointFocus } from "../components/RouteCards";
 import TripForm from "../components/TripForm";
-import { cumulativeMiles, pointsNearRoute, truckAt } from "../geo";
+import { cumulativeMiles, haversineMi, pointsNearRoute, truckAt } from "../geo";
 import { ROUTE_LETTERS } from "../risk";
 
 // Corridor points this close to a route's line count as "on" that route.
 const ON_ROUTE_MI = 10;
-// A forecast point within this many route miles of the truck counts as "at" it.
-const AT_TRUCK_MI = 15;
+// The nearest corridor point within this distance stands for the truck's spot.
+const AT_TRUCK_MI = 40;
+// Points this far past the truck along the route count as still ahead of it.
+const AHEAD_GAP_MI = 5;
 
 export default function Planner() {
   const [plan, setPlan] = useState<Plan | null>(null);
@@ -93,16 +95,27 @@ export default function Planner() {
   // is, and the worst on the road it has not driven yet. Weather behind the
   // truck is left out; it passed there earlier, at a different hour.
   const levelAt = (i: number) => heatmap?.points[i].risk[hour] ?? 0;
+  // The truck's position is the plan, not a measurement: a late truck is
+  // behind it. So the panel also gives the whole route at this hour.
   const atTruck = useMemo(() => {
-    if (!truck || !heatmap || !onRoute.length) return null;
-    const nearest = onRoute.reduce((best, p) =>
-      Math.abs(p.alongMi - truck.alongMi) < Math.abs(best.alongMi - truck.alongMi) ? p : best,
-    );
-    return Math.abs(nearest.alongMi - truck.alongMi) <= AT_TRUCK_MI ? nearest.index : null;
-  }, [truck, heatmap, onRoute]);
+    if (!truck || !heatmap) return null;
+    // Nearest corridor point on the map; the grid always has one close by.
+    let best: number | null = null;
+    let bestMi = Infinity;
+    heatmap.points.forEach((p, i) => {
+      const d = haversineMi(truck.at, [p.lon, p.lat]);
+      if (d < bestMi) {
+        bestMi = d;
+        best = i;
+      }
+    });
+    return bestMi <= AT_TRUCK_MI ? best : null;
+  }, [truck, heatmap]);
   const atTruckLevel = atTruck === null ? null : levelAt(atTruck);
-  const ahead = truck ? onRoute.filter((p) => p.alongMi > truck.alongMi + AT_TRUCK_MI) : [];
+  const ahead = truck ? onRoute.filter((p) => p.alongMi > truck.alongMi + AHEAD_GAP_MI) : [];
   const aheadWorst = ahead.length ? Math.max(...ahead.map((p) => levelAt(p.index))) : null;
+  const routeAny = onRoute.length ? Math.max(...onRoute.map((p) => levelAt(p.index))) : null;
+  const arrival = selected?.checkpoints[selected.checkpoints.length - 1]?.eta ?? null;
 
   const selectRoute = (id: string) => {
     setSelectedId(id);
@@ -204,6 +217,8 @@ export default function Planner() {
             routeLetter={selectedLetter}
             atTruck={atTruckLevel}
             aheadWorst={aheadWorst}
+            routeAny={routeAny}
+            arrival={arrival}
             truck={truck}
             heatmap={heatmap}
             hour={hour}

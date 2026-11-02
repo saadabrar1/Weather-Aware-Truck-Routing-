@@ -39,8 +39,9 @@ with **truck routing by Geoapify** (the truck class follows the load weight).
    is turquoise and its card names the rule that decided it.
 5. A **corridor heatmap** with a **0–48 hour slider** shows how the weather along the
    trip changes after departure. A truck marker shows where the selected route's truck
-   is at that hour, and the panel gives the weather **at the truck**, the worst
-   **ahead of it**, and the worst across the whole corridor.
+   should be at that hour if it keeps to schedule; the panel gives the weather there,
+   the worst still ahead, the worst anywhere on the route (for a late truck), and the
+   worst across the whole corridor.
 
 ## How each requirement is met
 
@@ -135,10 +136,10 @@ corridor at **one** hour. A High cell can glow near a route whose card says 0 Hi
 miles because it lies off the road, or because the truck passes that spot hours
 before or after the cell. To make that readable, the map shows where the selected
 route's **truck** is at the slider hour (placed along the road from the route's own
-checkpoint ETAs), and the panel reports the weather **at the truck** and the worst
-**ahead of it** on the route, from corridor points within 10 miles of the road.
-Weather the truck has already driven past is left out of those lines: it was there
-at a different hour.
+checkpoint ETAs), and the panel reports the weather **at that point** and the worst
+**still ahead** on the route. That position assumes the truck keeps to schedule, which
+nobody can promise, so the panel also gives the worst **anywhere on the route** at
+that hour, for a truck that runs late, and keeps showing it after the planned arrival.
 
 ## Assumptions and decisions
 

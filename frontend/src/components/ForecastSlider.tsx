@@ -11,6 +11,10 @@ type Props = {
   atTruck: number | null;
   /** Worst level on the selected route ahead of the truck, at this hour. */
   aheadWorst: number | null;
+  /** Worst level anywhere on the selected route, at this hour. */
+  routeAny: number | null;
+  /** The selected route's planned arrival (last checkpoint ETA). */
+  arrival: string | null;
   truck: TruckState | null;
   heatmap: Heatmap | null;
   hour: number;
@@ -27,6 +31,8 @@ export default function ForecastSlider({
   routeLetter,
   atTruck,
   aheadWorst,
+  routeAny,
+  arrival,
   truck,
   heatmap,
   hour,
@@ -52,7 +58,9 @@ export default function ForecastSlider({
   return (
     <section
       aria-label="Corridor weather forecast"
-      className="border-rule bg-panel border-t px-4 pt-3 pb-3 md:px-5"
+      // A fixed minimum height, so the map above doesn't shrink again when the
+      // forecast arrives and replaces the loading line with the readout.
+      className="border-rule bg-panel border-t px-4 pt-3 pb-3 md:min-h-[200px] md:px-5"
     >
       <div className="grid gap-x-6 gap-y-3 md:grid-cols-[9rem_minmax(0,1fr)_15rem] md:items-start xl:grid-cols-[9rem_minmax(0,1fr)_18rem]">
         <div>
@@ -121,28 +129,24 @@ export default function ForecastSlider({
           ) : corridor ? (
             <dl className="space-y-1">
               {truck && (
-                <div className="flex justify-between gap-3">
-                  <dt className="text-ink-2">Truck on Route {routeLetter}</dt>
-                  <dd className="font-semibold whitespace-nowrap tabular-nums">
-                    {truckText(truck)}
-                  </dd>
-                </div>
+                <Row label="Truck, if on schedule">
+                  <span className="font-semibold whitespace-nowrap tabular-nums">
+                    {truckText(truck, arrival)}
+                  </span>
+                </Row>
               )}
-              <div className="flex justify-between gap-3">
-                <dt className="text-ink-2 whitespace-nowrap">At the truck</dt>
-                <dd className="font-bold">
-                  <Level level={atTruck} none="no forecast point nearby" />
-                </dd>
-              </div>
-              <div className="flex justify-between gap-3">
-                <dt className="text-ink-2 whitespace-nowrap">Ahead on the route</dt>
-                <dd className="font-bold">
-                  <Level
-                    level={aheadWorst}
-                    none={truck?.kind === "arrived" ? "nothing left to drive" : "no data"}
-                  />
-                </dd>
-              </div>
+              <Row label="At that point">
+                <Level level={atTruck} none="no forecast point nearby" />
+              </Row>
+              <Row label="Still ahead">
+                <Level
+                  level={aheadWorst}
+                  none={truck?.kind === "arrived" ? "none if on schedule" : "no data"}
+                />
+              </Row>
+              <Row label={`Anywhere on Route ${routeLetter}`}>
+                <Level level={routeAny} none="no data" />
+              </Row>
               <div className="flex justify-between gap-3">
                 <dt className="text-ink-2 whitespace-nowrap">Whole corridor</dt>
                 <dd className="font-bold" style={{ color: LEVELS[corridor.worst].ink }}>
@@ -159,8 +163,9 @@ export default function ForecastSlider({
 
       <div className="border-rule-2 mt-2.5 flex flex-col gap-2 border-t pt-2 text-[12px] md:flex-row md:items-center md:justify-between">
         <p className="text-ink-3">
-          The map shows weather at the chosen hour. Weather behind the truck is left out of the
-          route lines; route results use the hour the truck reaches each checkpoint.
+          The map shows weather at the chosen hour. The truck's position assumes it keeps to
+          schedule; if it runs late, check "Anywhere on Route {routeLetter}". Route results use the
+          planned arrival at each checkpoint.
         </p>
         <ul
           className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1"
@@ -178,9 +183,10 @@ export default function ForecastSlider({
   );
 }
 
-function truckText(truck: TruckState): string {
+function truckText(truck: TruckState, arrival: string | null): string {
   if (truck.kind !== "driving") {
-    return truck.kind === "waiting" ? "not departed yet" : "arrived";
+    if (truck.kind === "waiting") return "not departed yet";
+    return arrival ? `arrived ${formatClock(arrival)}` : "arrived";
   }
   return `mile ${Math.round(truck.mile)} of ${Math.round(truck.totalMiles)}`;
 }
@@ -188,4 +194,13 @@ function truckText(truck: TruckState): string {
 function Level({ level, none }: { level: number | null; none: string }) {
   if (level === null) return <span className="text-ink-3 font-normal">{none}</span>;
   return <span style={{ color: LEVELS[level].ink }}>{LEVELS[level].label}</span>;
+}
+
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex justify-between gap-3">
+      <dt className="text-ink-2 whitespace-nowrap">{label}</dt>
+      <dd className="font-bold">{children}</dd>
+    </div>
+  );
 }
