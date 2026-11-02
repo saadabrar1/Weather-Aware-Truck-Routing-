@@ -9,7 +9,7 @@ with **truck routing by Geoapify** (the truck class follows the load weight).
 
 **Walkthrough (Loom):** _link to be added_
 
-![Planner: Memphis to Dallas on Geoapify truck routing. Three routes, risk-coloured checkpoints, a High cell in the corridor heatmap, and the 0–48 h slider](docs/planner.png)
+![Planner: Denver to Dallas on Geoapify truck routing. Three routes marked with highway shields, the routes ranked as a list with strip maps, the truck at +6 h, and the 0–48 h corridor timeline](docs/planner.png)
 
 ---
 
