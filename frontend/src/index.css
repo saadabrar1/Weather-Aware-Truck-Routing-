@@ -1,26 +1,27 @@
 @import "tailwindcss";
 @import "maplibre-gl/dist/maplibre-gl.css";
 
-/* Palette taken from the trucking-dashboard look this app is built for:
-   deep teal surfaces, teal/turquoise accents. Risk colours live in risk.ts
-   and are never reused for UI chrome, so a colour always means one thing. */
+/* "Interstate": a light operations console. Navy ink on cool paper, rules
+   instead of shadows, one accent (interstate-shield blue). Risk colours live
+   in risk.ts and are never used for chrome, so a colour always means risk. */
 @theme {
-  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
-  --color-ink-950: #0b1014;
-  --color-ink-900: #0f171c;
-  --color-ink-800: #16222a;
-  --color-ink-700: #1f2f38;
-  --color-ink-600: #2c3f4a;
-  --color-deep: #043344;
-  --color-teal: #008080;
-  --color-turq: #40e0d0;
+  --font-sans: "Overpass", ui-sans-serif, system-ui, sans-serif;
+  --color-paper: #f3f5f7;
+  --color-panel: #ffffff;
+  --color-ink: #13253a;
+  --color-ink-2: #3d4f63;
+  --color-ink-3: #5b6b7d;
+  --color-rule: #d6dce3;
+  --color-rule-2: #e7ebef;
+  --color-shield: #1f4e9c;
+  --color-shield-dark: #173b77;
 
-  /* Entrance for above-the-fold content only; off for reduced motion. */
+  /* One orchestrated entrance, landing hero only; off for reduced motion. */
   --animate-fade-up: fade-up 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
   @keyframes fade-up {
     from {
       opacity: 0;
-      transform: translateY(14px);
+      transform: translateY(12px);
     }
     to {
       opacity: 1;
@@ -36,29 +37,19 @@ body,
 }
 
 body {
-  @apply bg-ink-950 font-sans text-slate-100 antialiased;
-  color-scheme: dark;
+  @apply bg-paper text-ink font-sans antialiased;
+  font-feature-settings: "tnum" 1;
 }
 
 .maplibregl-popup-content {
-  @apply border-ink-600 bg-ink-900 rounded-lg border px-3 py-2 text-slate-100 shadow-xl;
-}
-.maplibregl-popup-tip {
-  border-top-color: var(--color-ink-900) !important;
-  border-bottom-color: var(--color-ink-900) !important;
+  @apply border-rule text-ink rounded-md border bg-white px-3 py-2 shadow-md;
 }
 .maplibregl-popup-close-button {
-  @apply px-1.5 text-slate-400 hover:bg-transparent hover:text-white;
-}
-.maplibregl-ctrl-attrib {
-  @apply bg-ink-900/80! text-slate-400!;
-}
-.maplibregl-ctrl-attrib a {
-  @apply text-slate-300!;
+  @apply text-ink-3 hover:text-ink px-1.5 hover:bg-transparent;
 }
 
 /* One visible keyboard focus style everywhere; mouse clicks don't show it. */
 :focus-visible {
-  outline: 2px solid var(--color-turq);
+  outline: 2px solid var(--color-shield);
   outline-offset: 2px;
 }

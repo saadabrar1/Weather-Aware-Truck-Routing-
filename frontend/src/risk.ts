@@ -1,12 +1,14 @@
 // Risk levels match backend/planner/core/risk.py (0 = Low … 4 = No Travel).
+// `color` fills dots, strips and the map; `ink` is the same hue dark enough
+// to read as text on white.
 import type { RouteOption } from "./api";
 
 export const LEVELS = [
-  { key: "low", label: "Low", color: "#22c55e" },
-  { key: "moderate", label: "Moderate", color: "#eab308" },
-  { key: "high", label: "High", color: "#f97316" },
-  { key: "severe", label: "Severe", color: "#ef4444" },
-  { key: "no_travel", label: "No Travel", color: "#a855f7" },
+  { key: "low", label: "Low", color: "#22a454", ink: "#157a3a" },
+  { key: "moderate", label: "Moderate", color: "#e6b100", ink: "#8a6400" },
+  { key: "high", label: "High", color: "#f0700f", ink: "#b24a00" },
+  { key: "severe", label: "Severe", color: "#dc2a2a", ink: "#b01c1c" },
+  { key: "no_travel", label: "No Travel", color: "#8b3fd9", ink: "#6d28b8" },
 ] as const;
 
 export const ROUTE_LETTERS = ["A", "B", "C"];
@@ -40,8 +42,8 @@ const clockFormat = new Intl.DateTimeFormat(undefined, {
   minute: "2-digit",
 });
 
-export function formatClock(iso: string): string {
-  return clockFormat.format(new Date(iso));
+export function formatClock(iso: string | Date): string {
+  return clockFormat.format(typeof iso === "string" ? new Date(iso) : iso);
 }
 
 export function timeZoneLabel(iso: string): string {
