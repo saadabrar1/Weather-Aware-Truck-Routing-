@@ -4,10 +4,12 @@ A React + Django app that helps a truck driver pick the safest route. It compare
 three routes by the forecast **at the hour the truck reaches each checkpoint**, its
 **load weight** and **travel time**, then recommends one and explains why.
 
-**Live app:** https://13.236.127.52.sslip.io (planner at [`/app`](https://13.236.127.52.sslip.io/app))
+**Live app:** https://13.236.127.52.sslip.io (planner at [`/app`](https://13.236.127.52.sslip.io/app)),
+with **truck routing by Geoapify** (the truck class follows the load weight).
+
 **Walkthrough (Loom):** _link to be added_
 
-![Planner: three routes, risk-coloured checkpoints, corridor heatmap and the 0–48 h slider](docs/planner.png)
+![Planner: Memphis to Dallas on Geoapify truck routing. Three routes, risk-coloured checkpoints, a High cell in the corridor heatmap, and the 0–48 h slider](docs/planner.png)
 
 ---
 
@@ -43,7 +45,7 @@ three routes by the forecast **at the hour the truck reaches each checkpoint**, 
 | Requirement (from the brief) | Where |
 |---|---|
 | User enters origin & destination, departure date/time, load weight | `frontend/src/components/TripForm.tsx`, validated in `backend/planner/serializers.py` |
-| Generate **3 route options** with a routing API | `backend/planner/services/routing.py`, `planning._three_routes` |
+| Generate **3 route options** with a routing API | `backend/planner/services/routing.py` (HERE, Geoapify, OSRM), `planning._three_routes` |
 | Sample weather every **10 / 25 / 50 miles** at the truck's **estimated arrival time** | `backend/planner/core/sampling.py`, `services/weather.py` (`Forecast.at`) |
 | Weather risk from the **risk/load rules** | `backend/planner/core/risk.py` (40 boundary tests in `tests/test_risk.py`) |
 | **Recommend** the best route, balancing risk and time | `backend/planner/core/ranking.py` |
@@ -56,8 +58,8 @@ three routes by the forecast **at the hour the truck reaches each checkpoint**, 
 ```mermaid
 flowchart LR
   U[Browser<br/>React + MapLibre] -- /api/plan · /api/heatmap · /api/geocode --> D[Django + DRF<br/>stateless]
-  D --> R[Routing<br/>HERE truck · or OSRM]
-  D --> G[Geocoding<br/>HERE · or Photon]
+  D --> R[Routing<br/>HERE · Geoapify truck · or OSRM]
+  D --> G[Geocoding<br/>HERE · Geoapify · or Photon]
   D --> W[Open-Meteo<br/>hourly forecast]
   D --- C[(in-memory cache)]
 ```
@@ -176,7 +178,9 @@ rules; the routing key only decides whether the roads themselves suit a truck.
   MapLibre `heatmap` layer sums overlapping points and would show calm weather as risk.
 - **Backend:** forecasts are cached per 0.1° cell; requests to Open-Meteo go out in
   parallel batches; extra route alternatives are requested in parallel with a short
-  timeout. A plan typically takes **3–5 s** on the server, most of it routing.
+  timeout. A plan typically takes **about 5–9 s** on the server with Geoapify, most
+  of it the three routing requests (each alternative depends on the routes before
+  it, so they run one after another); forecasts add under 2 s.
 - **Delivery:** hashed assets are served as immutable; routes appear before the
   heatmap, which loads behind them.
 
@@ -211,7 +215,8 @@ npm ci && npm run dev                              # http://localhost:5173
 ```
 
 Settings come from environment variables; see [`.env.example`](.env.example). Only
-`DJANGO_SECRET_KEY` is required outside debug mode; `HERE_API_KEY` is optional.
+`DJANGO_SECRET_KEY` is required outside debug mode. `GEOAPIFY_API_KEY` (free, no
+card) or `HERE_API_KEY` turns on truck routing; without either, the app uses OSRM.
 
 ## Tests and CI/CD
 

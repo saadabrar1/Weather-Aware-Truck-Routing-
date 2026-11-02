@@ -207,8 +207,8 @@ export default function Landing() {
       <footer className="border-ink-800 border-t">
         <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-6 text-xs text-slate-400 sm:flex-row sm:items-center sm:justify-between">
           <span>
-            Weather: Open-Meteo · Routing: HERE truck routing when configured, otherwise OSRM · Map:
-            © OpenStreetMap, © CARTO
+            Weather: Open-Meteo · Routing: Geoapify or HERE truck routing when configured, otherwise
+            OSRM · Map: © OpenStreetMap, © CARTO
           </span>
           <a
             href="https://github.com/saadabrar1/Weather-Aware-Truck-Routing-"
